@@ -9,25 +9,12 @@
 
     <string name="offline_button">Hors-ligne</string>
     <string name="offline_title">Hors-ligne</string>
-    <string name="offline_help">Télécharge le fond affiché (%1$s) sur une zone entière. Pour télécharger un autre fond, sélectionnez-le d\'abord sur la carte. Les zones parcourues en ligne sont aussi gardées en cache automatiquement. Les adresses, les radars et les caméras n\'ont pas besoin de téléchargement : ils sont fournis avec l\'appli.</string>
-    <string name="areas_title">Télécharger %1$s</string>
+    <string name="offline_help">Cartes %1$s consultables sans connexion, téléchargées une fois puis renouvelées chaque mois. Pour un autre fond, sélectionnez-le d\'abord sur la carte. Les adresses, les radars et les caméras n\'ont pas besoin de téléchargement : ils sont fournis avec l\'appli.</string>
     <string name="area_title">%1$s — %2$s</string>
-    <string name="area_estimate">Environ %1$s · détail : %2$s</string>
-    <string name="detail_towns">villes et routes</string>
-    <string name="detail_districts">quartiers</string>
-    <string name="detail_streets">rues</string>
-    <string name="detail_buildings">bâtiments</string>
-    <string name="confirm_download">Environ %1$s à télécharger (détail : %2$s). Wi-Fi conseillé. Gardez l\'appli ouverte : le téléchargement s\'arrête si elle est fermée, et pourra être repris plus tard.</string>
     <string name="download">Télécharger</string>
     <string name="in_progress">En cours</string>
-    <string name="saved">Téléchargée</string>
-    <string name="downloading">Téléchargement… %1$d / %2$d</string>
     <string name="stop">Arrêter</string>
     <string name="cancel">Annuler</string>
-    <string name="saved_title">Zones téléchargées</string>
-    <string name="saved_item">%1$s · %2$s</string>
-    <string name="saved_incomplete">incomplète, %1$s</string>
-    <string name="resume">Reprendre</string>
     <string name="delete">Supprimer</string>
     <string name="error_download">Erreur de téléchargement : %1$s</string>
 
@@ -97,4 +84,17 @@
     <string name="location_denied_title">Localisation non autorisée</string>
     <string name="location_denied">L\'appli n\'a pas le droit de lire votre position. Autorisez-la dans les réglages de l\'appli, rubrique Autorisations › Position.</string>
     <string name="open_settings">Ouvrir les réglages</string>
+    <string name="maps_no_space">Pas assez de place libre sur le téléphone pour cette carte.</string>
+    <string name="maps_not_published">Les cartes hors-ligne ne sont pas encore publiées : réessayez dans quelques jours.</string>
+    <string name="maps_country_title">Pays entier</string>
+    <string name="maps_country">France — quartiers (zoom 13)</string>
+    <string name="maps_regions_title">Régions — rues (zoom 14)</string>
+    <string name="maps_regions_help">Ajoute les rues à la carte du pays entier : téléchargez-la aussi.</string>
+    <string name="maps_size">%1$s</string>
+    <string name="maps_installed">Téléchargée · carte du %1$s</string>
+    <string name="maps_update_available">Téléchargée · carte plus récente disponible (%1$s)</string>
+    <string name="maps_unavailable">Pas encore publiée</string>
+    <string name="maps_progress">%1$s sur %2$s</string>
+    <string name="maps_confirm">%1$s à télécharger depuis GitHub. Wi-Fi conseillé. Le téléchargement s\'arrête si l\'appli est fermée, et reprend là où il s\'est arrêté la fois suivante.</string>
+    <string name="update">Mettre à jour</string>
 </resources>

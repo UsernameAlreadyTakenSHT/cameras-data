@@ -39,6 +39,7 @@ class CamerasApp : Application() {
             }
             .build()
         TileHealth.init(this)
+        MapFiles.init(this)
         HttpRequestUtil.setOkHttpClient(
             OkHttpClient.Builder()
                 .addInterceptor(LocalStyleInterceptor(assets))
@@ -79,11 +80,16 @@ private class LocalStyleInterceptor(private val assets: AssetManager) : Intercep
                 response.code(404).message("Not Found").body("".toResponseBody(null)).build()
             }
         }
-        val layer = MapLayer.byId(request.url.pathSegments.lastOrNull()?.removeSuffix(".json"))
+        val name = request.url.pathSegments.lastOrNull()?.removeSuffix(".json").orEmpty()
+        // "<id>.json": the map, over the downloaded France file if any; "<id>-online.json": the
+        // region downloads, which must only fetch the online tiles.
+        val online = name.endsWith("-online")
+        val layer = MapLayer.byId(name.removeSuffix("-online"))
         val response = Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
         return if (layer != null) {
+            val local = if (online) emptyList() else MapFiles.installedFiles(layer)
             response.code(200).message("OK")
-                .body(layer.styleJson().toResponseBody("application/json".toMediaType()))
+                .body(layer.styleJson(local).toResponseBody("application/json".toMediaType()))
                 .build()
         } else {
             response.code(404).message("Not Found").body("".toResponseBody(null)).build()

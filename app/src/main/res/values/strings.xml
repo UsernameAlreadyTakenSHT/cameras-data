@@ -9,25 +9,12 @@
 
     <string name="offline_button">Offline</string>
     <string name="offline_title">Offline</string>
-    <string name="offline_help">Downloads the base map on screen (%1$s) over a whole area. To download another base map, select it on the map first. Areas you browse online are also kept in cache automatically. Addresses, speed cameras and surveillance cameras need no download: they come with the app.</string>
-    <string name="areas_title">Download %1$s</string>
+    <string name="offline_help">Maps of %1$s to view without a connection, downloaded once and renewed every month. To download another base map, select it on the map first. Addresses, speed cameras and surveillance cameras need no download: they come with the app.</string>
     <string name="area_title">%1$s — %2$s</string>
-    <string name="area_estimate">About %1$s · detail: %2$s</string>
-    <string name="detail_towns">towns and roads</string>
-    <string name="detail_districts">districts</string>
-    <string name="detail_streets">streets</string>
-    <string name="detail_buildings">buildings</string>
-    <string name="confirm_download">About %1$s to download (detail: %2$s). Wi-Fi recommended. Keep the app open: the download stops if it is closed, and can be resumed later.</string>
     <string name="download">Download</string>
     <string name="in_progress">In progress</string>
-    <string name="saved">Downloaded</string>
-    <string name="downloading">Downloading… %1$d / %2$d</string>
     <string name="stop">Stop</string>
     <string name="cancel">Cancel</string>
-    <string name="saved_title">Downloaded areas</string>
-    <string name="saved_item">%1$s · %2$s</string>
-    <string name="saved_incomplete">incomplete, %1$s</string>
-    <string name="resume">Resume</string>
     <string name="delete">Delete</string>
     <string name="error_download">Download error: %1$s</string>
 
@@ -97,4 +84,17 @@
     <string name="location_denied_title">Location not allowed</string>
     <string name="location_denied">The app is not allowed to read your position. Allow it in the app\'s settings, under Permissions › Location.</string>
     <string name="open_settings">Open settings</string>
+    <string name="maps_no_space">Not enough free space on the phone for this map.</string>
+    <string name="maps_not_published">The offline maps are not published yet: try again in a few days.</string>
+    <string name="maps_country_title">Whole country</string>
+    <string name="maps_country">France — districts (zoom 13)</string>
+    <string name="maps_regions_title">Regions — streets (zoom 14)</string>
+    <string name="maps_regions_help">Adds the streets to the whole country map: download it as well.</string>
+    <string name="maps_size">%1$s</string>
+    <string name="maps_installed">Downloaded · map of %1$s</string>
+    <string name="maps_update_available">Downloaded · newer map available (%1$s)</string>
+    <string name="maps_unavailable">Not published yet</string>
+    <string name="maps_progress">%1$s of %2$s</string>
+    <string name="maps_confirm">%1$s to download from GitHub. Wi-Fi recommended. The download stops if the app is closed, and goes on from there next time.</string>
+    <string name="update">Update</string>
 </resources>

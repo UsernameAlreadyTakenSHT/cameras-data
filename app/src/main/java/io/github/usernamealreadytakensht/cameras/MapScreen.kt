@@ -103,14 +103,13 @@ private const val REFRESH_PAUSE_MS = 800L
 fun MapScreen() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-    val offline = remember { OfflineMaps(context.applicationContext) }
     val files = remember { DataFiles(context.applicationContext) }
     val addresses = remember { AddressStore(context.applicationContext, files) }
     val radarStore = remember { RadarStore(files) }
     val cameraStore = remember { CameraStore(files) }
     // Once a month, the data that came with the app is renewed if newer files were published.
     LaunchedEffect(Unit) {
-        DataUpdater(context.applicationContext, files, radarStore, cameraStore, addresses, offline).runIfDue()
+        DataUpdater(context.applicationContext, files, radarStore, cameraStore, addresses).runIfDue()
     }
     val regions by produceState(emptyList<Region>()) { value = Regions.load(context.applicationContext) }
     var layer by remember {
@@ -164,7 +163,7 @@ fun MapScreen() {
 
     // A long download must not be cut by the screen going to sleep.
     val view = LocalView.current
-    val downloading = offline.progress?.manual == true
+    val downloading = MapFiles.progress != null
     DisposableEffect(view, downloading) {
         view.keepScreenOn = downloading
         onDispose { view.keepScreenOn = false }
@@ -237,7 +236,7 @@ fun MapScreen() {
                 }
                 ElevatedButton(
                     onClick = {
-                        offline.refresh()
+                        MapFiles.refresh(force = true)
                         sheetOpen = true
                     },
                 ) {
@@ -383,7 +382,7 @@ fun MapScreen() {
 
     if (sheetOpen) {
         ModalBottomSheet(onDismissRequest = { sheetOpen = false }) {
-            OfflineSheet(offline, regions, layer)
+            OfflineSheet(regions, layer)
         }
     }
 
@@ -525,6 +524,8 @@ private fun BaseMap(
     val mapView = remember {
         MapView(context).apply {
             onCreate(null)
+            // A style that cannot be read leaves the map blank: at least the log says why.
+            addOnDidFailLoadingMapListener { message -> android.util.Log.e("Cameras", "map failed to load: $message") }
             getMapAsync { ready ->
                 ready.setMaxZoomPreference(20.0)
                 ready.uiSettings.apply {
@@ -560,9 +561,9 @@ private fun BaseMap(
         }
     }
 
-    LaunchedEffect(map, layer) {
+    LaunchedEffect(map, layer, MapFiles.version) {
         style = null
-        map?.setStyle(Style.Builder().fromUri(layer.styleUrl)) { style = it }
+        map?.setStyle(Style.Builder().fromUri(layer.styleUrl(MapFiles.version))) { style = it }
     }
 
     // A new base map means a new style: the overlays are put back on each of them.

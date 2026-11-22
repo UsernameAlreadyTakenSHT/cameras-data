@@ -19,8 +19,6 @@ class Region(
     val geometry: Geometry,
     private val tilesPerZoom: IntArray,
 ) {
-    fun plan(layer: MapLayer): DownloadPlan =
-        planDownload(tilesPerZoom, layer.maxTileZoom, MAX_TILES_PER_DOWNLOAD, layer::averageTileBytes)
 }
 
 object Regions {
