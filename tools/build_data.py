@@ -9,8 +9,8 @@ Outputs go to app/src/main/assets/ (or to the folder named by the CAMERAS_DATA_O
 variable): addresses.db, radars.csv, cameras.tsv, and data.json (dates and counts, shown by the
 app and compared by its monthly update). CACHE_DIR keeps the downloaded address files between runs.
 
-The same script runs every month in the cameras-data repository, which publishes the files the
-app downloads: keep the two copies identical.
+The same script runs every month in GitHub Actions (.github/workflows/data.yml), which publishes
+the files the app downloads.
 
 Sources:
   - addresses: Base Adresse Nationale, one CSV per département (Licence Ouverte 2.0)

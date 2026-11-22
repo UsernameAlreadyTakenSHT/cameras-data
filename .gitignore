@@ -20,3 +20,8 @@
 
 # Bundled address database: 358 MB, over GitHub's file limit. Rebuilt by tools/build_data.py.
 /app/src/main/assets/addresses.db
+
+# Outputs and caches of the monthly data build
+dist/
+ban-cache/
+__pycache__/

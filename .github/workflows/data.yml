@@ -1,0 +1,40 @@
+name: Monthly data
+
+# Rebuilds the data files of the Cameras app and publishes them as assets of the "data" release.
+# The app compares data.json once a month and downloads what changed.
+on:
+  schedule:
+    - cron: "17 3 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      CAMERAS_DATA_OUT: dist
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fixed speed cameras
+        run: python tools/build_data.py radars
+      - name: Surveillance cameras
+        run: python tools/build_data.py cameras
+      - name: Addresses
+        run: python tools/build_data.py addresses ban-cache
+      - name: Compress the address database
+        run: gzip -9 dist/addresses.db
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view data >/dev/null 2>&1 || gh release create data --title "Data" \
+            --notes "Data files downloaded by the Cameras app. Rebuilt on the 1st of each month."
+          # data.json goes last: the app must never see new dates before the files they describe.
+          gh release upload data dist/radars.csv dist/cameras.tsv dist/addresses.db.gz --clobber
+          gh release upload data dist/data.json --clobber

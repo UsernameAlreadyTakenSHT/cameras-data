@@ -25,8 +25,8 @@ gradlew.bat :app:assembleDebug
 L'APK est produit dans `app/build/outputs/apk/debug/` (environ 290 Mo, dont la base d'adresses).
 Les tests unitaires se lancent avec `gradlew.bat :app:testDebugUnitTest`.
 
-Les données intégrées (`app/src/main/assets/`) ne sont pas dans le dépôt de code si elles sont
-trop lourdes pour lui : elles se refabriquent avec `tools/build_data.py` (voir plus bas).
+La base d'adresses intégrée (`app/src/main/assets/addresses.db`, 358 Mo) est trop lourde pour le
+dépôt : avant de compiler, il faut la fabriquer avec `tools/build_data.py` (voir plus bas).
 
 ## En ligne, hors-ligne, mises à jour
 
@@ -43,15 +43,14 @@ fois ; quand il y a du réseau, l'appli préfère les données en ligne, plus r�
 
 ### Mise à jour mensuelle
 
-Les fichiers de données sont refabriqués le 1er de chaque mois par une tâche GitHub Actions du
-dépôt [cameras-data](https://github.com/UsernameAlreadyTakenSHT/cameras-data), qui les publie
-avec un petit fichier `data.json` donnant la date de chacun. Au lancement, au plus une fois par
-mois, l'appli lit ce fichier et ne télécharge que ce qui a changé (`DataFiles.kt`). Les téléphones
-n'interrogent donc jamais eux-mêmes les serveurs sources pour des jeux de données entiers. La base
-d'adresses et la revérification des cartes attendent une connexion non limitée (Wi-Fi).
+Les fichiers de données sont refabriqués le 1er de chaque mois par une tâche GitHub Actions de ce
+dépôt (`.github/workflows/data.yml`), qui les publie dans la release `data` avec un petit fichier
+`data.json` donnant la date de chacun. Au lancement, au plus une fois par mois, l'appli lit ce
+fichier et ne télécharge que ce qui a changé (`DataFiles.kt`). Les téléphones n'interrogent donc
+jamais eux-mêmes les serveurs sources pour des jeux de données entiers. La base d'adresses et la
+revérification des cartes attendent une connexion non limitée (Wi-Fi).
 
-`tools/build_data.py` fabrique ces fichiers, pour l'appli comme pour le dépôt de données (les deux
-copies du script doivent rester identiques) :
+`tools/build_data.py` fabrique ces fichiers, pour l'appli comme pour la tâche mensuelle :
 
 ```
 python tools/build_data.py radars
