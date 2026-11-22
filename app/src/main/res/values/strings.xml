@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cameras</string>
+
+    <string name="layers">Base maps</string>
+    <string name="layer_plan_full">Plan IGN</string>
+    <string name="layer_photos_full">Aerial photographs</string>
+    <string name="attribution">© IGN – %1$s</string>
+
+    <string name="offline_button">Offline</string>
+    <string name="offline_title">Offline</string>
+    <string name="offline_help">Downloads the base map on screen (%1$s) over a whole area. To download another base map, select it on the map first. Areas you browse online are also kept in cache automatically. Addresses, speed cameras and surveillance cameras need no download: they come with the app.</string>
+    <string name="areas_title">Download %1$s</string>
+    <string name="area_title">%1$s — %2$s</string>
+    <string name="area_estimate">About %1$s · detail: %2$s</string>
+    <string name="detail_towns">towns and roads</string>
+    <string name="detail_districts">districts</string>
+    <string name="detail_streets">streets</string>
+    <string name="detail_buildings">buildings</string>
+    <string name="confirm_download">About %1$s to download (detail: %2$s). Wi-Fi recommended. Keep the app open: the download stops if it is closed, and can be resumed later.</string>
+    <string name="download">Download</string>
+    <string name="in_progress">In progress</string>
+    <string name="saved">Downloaded</string>
+    <string name="downloading">Downloading… %1$d / %2$d</string>
+    <string name="stop">Stop</string>
+    <string name="cancel">Cancel</string>
+    <string name="saved_title">Downloaded areas</string>
+    <string name="saved_item">%1$s · %2$s</string>
+    <string name="saved_incomplete">incomplete, %1$s</string>
+    <string name="resume">Resume</string>
+    <string name="delete">Delete</string>
+    <string name="error_download">Download error: %1$s</string>
+
+    <string name="search_hint">Address, coordinates…</string>
+    <string name="search_coordinates">Coordinates</string>
+    <string name="search_geohash">Geohash</string>
+    <string name="search_loading">Searching…</string>
+    <string name="search_empty">No result</string>
+    <string name="search_offline">No connection: results from the addresses bundled in the app</string>
+    <string name="search_offline_empty">No connection, and nothing found in the addresses bundled in the app</string>
+
+    <string name="radars_title">Fixed speed cameras</string>
+    <string name="radars_ready">%1$d cameras · list of %2$s</string>
+    <string name="radars_attribution">Cameras: ministère de l\'Intérieur</string>
+    <string name="radar_type_etf">Fixed speed camera</string>
+    <string name="radar_type_etd">Discriminating speed camera (by vehicle type)</string>
+    <string name="radar_type_ett">New-generation camera (speed or crossing)</string>
+    <string name="radar_type_etu">New-generation urban camera (speed or crossing)</string>
+    <string name="radar_type_etvm">Average speed camera</string>
+    <string name="radar_type_etfr">Red-light camera</string>
+    <string name="radar_type_etpn">Level-crossing camera</string>
+    <string name="radar_type_other">Camera (%1$s)</string>
+    <string name="radar_speed">limit %1$d km/h</string>
+    <string name="radar_since">in service since %1$s</string>
+    <string name="radar_number">no. %1$s</string>
+
+    <string name="cameras_title">Surveillance cameras</string>
+    <string name="cameras_ready">%1$d cameras · OpenStreetMap, %2$s</string>
+    <string name="cameras_ready_online">%1$d cameras · OpenStreetMap, %2$s, area on screen up to date</string>
+    <string name="cameras_attribution">Cameras: © OpenStreetMap contributors</string>
+    <string name="camera_unknown">Camera (type not given)</string>
+    <string name="camera_fixed">Fixed camera</string>
+    <string name="camera_panning">Panning camera</string>
+    <string name="camera_dome">Dome camera</string>
+    <string name="camera_guard">Guard</string>
+    <string name="camera_alpr">Licence plate recognition (ALPR)</string>
+    <string name="camera_zone_public">films public space</string>
+    <string name="camera_zone_outdoor">films a private outdoor area</string>
+    <string name="camera_zone_indoor">films indoors</string>
+    <string name="camera_direction">direction %1$s</string>
+    <string name="camera_operator">operator: %1$s</string>
+    <string name="camera_source">OpenStreetMap</string>
+    <string name="search_preparing">No connection. The addresses are being prepared (first launch): try again in a moment.</string>
+
+    <string name="ok">OK</string>
+    <string name="photos_panoramax">Panoramax street photos</string>
+    <string name="photos_mapillary">Mapillary street photos</string>
+    <string name="photos_off">Off: no request is sent</string>
+    <string name="photos_off_token">Off: no request is sent · needs an access token</string>
+    <string name="photos_hint">On: long-press the map to see the closest photo</string>
+    <string name="photos_title">Street photo</string>
+    <string name="photos_none">No photo within %1$d m of this point.</string>
+    <string name="photos_failed">The photo could not be fetched: %1$s</string>
+    <string name="photos_open">Open on %1$s</string>
+    <string name="mapillary_token">Access token</string>
+    <string name="mapillary_token_help">Mapillary only answers with the access token of a developer account (mapillary.com › Developers). Paste yours here; it stays on this phone. Leave empty to turn Mapillary off.</string>
+    <string name="cache_clear">Clear the cache</string>
+    <string name="cache_size">%1$s of photos and online searches</string>
+</resources>

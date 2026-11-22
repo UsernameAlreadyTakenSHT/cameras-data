@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Caméras</string>
+
+    <string name="layers">Fonds de carte</string>
+    <string name="layer_plan_full">Plan IGN</string>
+    <string name="layer_photos_full">Photographies aériennes</string>
+    <string name="attribution">© IGN – %1$s</string>
+
+    <string name="offline_button">Hors-ligne</string>
+    <string name="offline_title">Hors-ligne</string>
+    <string name="offline_help">Télécharge le fond affiché (%1$s) sur une zone entière. Pour télécharger un autre fond, sélectionnez-le d\'abord sur la carte. Les zones parcourues en ligne sont aussi gardées en cache automatiquement. Les adresses, les radars et les caméras n\'ont pas besoin de téléchargement : ils sont fournis avec l\'appli.</string>
+    <string name="areas_title">Télécharger %1$s</string>
+    <string name="area_title">%1$s — %2$s</string>
+    <string name="area_estimate">Environ %1$s · détail : %2$s</string>
+    <string name="detail_towns">villes et routes</string>
+    <string name="detail_districts">quartiers</string>
+    <string name="detail_streets">rues</string>
+    <string name="detail_buildings">bâtiments</string>
+    <string name="confirm_download">Environ %1$s à télécharger (détail : %2$s). Wi-Fi conseillé. Gardez l\'appli ouverte : le téléchargement s\'arrête si elle est fermée, et pourra être repris plus tard.</string>
+    <string name="download">Télécharger</string>
+    <string name="in_progress">En cours</string>
+    <string name="saved">Téléchargée</string>
+    <string name="downloading">Téléchargement… %1$d / %2$d</string>
+    <string name="stop">Arrêter</string>
+    <string name="cancel">Annuler</string>
+    <string name="saved_title">Zones téléchargées</string>
+    <string name="saved_item">%1$s · %2$s</string>
+    <string name="saved_incomplete">incomplète, %1$s</string>
+    <string name="resume">Reprendre</string>
+    <string name="delete">Supprimer</string>
+    <string name="error_download">Erreur de téléchargement : %1$s</string>
+
+    <string name="search_hint">Adresse, coordonnées…</string>
+    <string name="search_coordinates">Coordonnées</string>
+    <string name="search_geohash">Geohash</string>
+    <string name="search_loading">Recherche…</string>
+    <string name="search_empty">Aucun résultat</string>
+    <string name="search_offline">Hors connexion : résultats des adresses intégrées à l\'appli</string>
+    <string name="search_offline_empty">Hors connexion, et rien trouvé dans les adresses intégrées à l\'appli</string>
+
+    <string name="radars_title">Radars fixes</string>
+    <string name="radars_ready">%1$d radars · liste du %2$s</string>
+    <string name="radars_attribution">Radars : ministère de l\'Intérieur</string>
+    <string name="radar_type_etf">Radar vitesse fixe</string>
+    <string name="radar_type_etd">Radar vitesse discriminant (par type de véhicule)</string>
+    <string name="radar_type_ett">Radar de nouvelle génération (vitesse ou franchissement)</string>
+    <string name="radar_type_etu">Radar urbain de nouvelle génération (vitesse ou franchissement)</string>
+    <string name="radar_type_etvm">Radar vitesse moyenne</string>
+    <string name="radar_type_etfr">Radar de feu rouge</string>
+    <string name="radar_type_etpn">Radar de passage à niveau</string>
+    <string name="radar_type_other">Radar (%1$s)</string>
+    <string name="radar_speed">limite %1$d km/h</string>
+    <string name="radar_since">en service depuis le %1$s</string>
+    <string name="radar_number">n° %1$s</string>
+
+    <string name="cameras_title">Caméras de surveillance</string>
+    <string name="cameras_ready">%1$d caméras · OpenStreetMap, %2$s</string>
+    <string name="cameras_ready_online">%1$d caméras · OpenStreetMap, %2$s, zone affichée à jour</string>
+    <string name="cameras_attribution">Caméras : © contributeurs OpenStreetMap</string>
+    <string name="camera_unknown">Caméra (type non précisé)</string>
+    <string name="camera_fixed">Caméra fixe</string>
+    <string name="camera_panning">Caméra orientable</string>
+    <string name="camera_dome">Caméra dôme</string>
+    <string name="camera_guard">Gardien</string>
+    <string name="camera_alpr">Lecture automatique de plaques</string>
+    <string name="camera_zone_public">filme l\'espace public</string>
+    <string name="camera_zone_outdoor">filme un extérieur privé</string>
+    <string name="camera_zone_indoor">filme en intérieur</string>
+    <string name="camera_direction">orientation %1$s</string>
+    <string name="camera_operator">exploitant : %1$s</string>
+    <string name="camera_source">OpenStreetMap</string>
+    <string name="search_preparing">Hors connexion. Les adresses sont en cours de préparation (premier lancement) : réessayez dans un instant.</string>
+
+    <string name="ok">OK</string>
+    <string name="photos_panoramax">Photos de rue Panoramax</string>
+    <string name="photos_mapillary">Photos de rue Mapillary</string>
+    <string name="photos_off">Désactivé : aucune requête envoyée</string>
+    <string name="photos_off_token">Désactivé : aucune requête envoyée · jeton d\'accès requis</string>
+    <string name="photos_hint">Activé : appui long sur la carte pour voir la photo la plus proche</string>
+    <string name="photos_title">Photo de rue</string>
+    <string name="photos_none">Aucune photo à moins de %1$d m de ce point.</string>
+    <string name="photos_failed">La photo n\'a pas pu être récupérée : %1$s</string>
+    <string name="photos_open">Ouvrir sur %1$s</string>
+    <string name="mapillary_token">Jeton d\'accès</string>
+    <string name="mapillary_token_help">Mapillary ne répond qu\'avec le jeton d\'accès d\'un compte développeur (mapillary.com › Developers). Collez le vôtre ici ; il reste sur ce téléphone. Laissez vide pour désactiver Mapillary.</string>
+    <string name="cache_clear">Vider le cache</string>
+    <string name="cache_size">%1$s de photos et de recherches en ligne</string>
+</resources>
