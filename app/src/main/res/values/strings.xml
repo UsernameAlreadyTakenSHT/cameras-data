@@ -91,4 +91,10 @@
     <string name="tiles_unreachable">%1$s, the IGN map server, does not answer. Try again later; downloaded areas still show.</string>
     <string name="my_location">My position</string>
     <string name="location_unavailable">Position not found yet: check that location is turned on.</string>
+    <string name="location_searching">Looking for your position…</string>
+    <string name="location_off_title">Location is turned off</string>
+    <string name="location_off">Turn on location in the phone\'s settings to show your position on the map.</string>
+    <string name="location_denied_title">Location not allowed</string>
+    <string name="location_denied">The app is not allowed to read your position. Allow it in the app\'s settings, under Permissions › Location.</string>
+    <string name="open_settings">Open settings</string>
 </resources>

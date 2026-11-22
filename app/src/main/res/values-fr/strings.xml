@@ -91,4 +91,10 @@
     <string name="tiles_unreachable">%1$s, le serveur de cartes de l\'IGN, ne répond pas. Réessayez plus tard ; les zones téléchargées restent affichées.</string>
     <string name="my_location">Ma position</string>
     <string name="location_unavailable">Position introuvable pour l\'instant : vérifiez que la localisation est activée.</string>
+    <string name="location_searching">Recherche de votre position…</string>
+    <string name="location_off_title">Localisation désactivée</string>
+    <string name="location_off">Activez la localisation dans les réglages du téléphone pour afficher votre position sur la carte.</string>
+    <string name="location_denied_title">Localisation non autorisée</string>
+    <string name="location_denied">L\'appli n\'a pas le droit de lire votre position. Autorisez-la dans les réglages de l\'appli, rubrique Autorisations › Position.</string>
+    <string name="open_settings">Ouvrir les réglages</string>
 </resources>

@@ -6,7 +6,9 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.net.Uri
+import android.provider.Settings
 import android.text.format.Formatter
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -43,6 +46,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -131,9 +135,14 @@ fun MapScreen() {
     // "My position": each press asks the map to follow the phone's position.
     var centerRequests by remember { mutableIntStateOf(0) }
     var locationAllowed by remember { mutableStateOf(hasLocationPermission(context)) }
+    // Why the position cannot be shown, explained in a dialog that leads to the right setting.
+    var locationIssue by remember { mutableStateOf<LocationIssue?>(null) }
+    fun locate() {
+        if (isLocationEnabled(context)) centerRequests++ else locationIssue = LocationIssue.OFF
+    }
     val permissionRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         locationAllowed = hasLocationPermission(context)
-        if (locationAllowed) centerRequests++
+        if (locationAllowed) locate() else locationIssue = LocationIssue.DENIED
     }
     // Where the map was long-pressed: a panel offers to see that place elsewhere.
     var pointAt by remember { mutableStateOf<GeoPoint?>(null) }
@@ -206,7 +215,7 @@ fun MapScreen() {
                 FilledTonalIconButton(
                     onClick = {
                         if (locationAllowed) {
-                            centerRequests++
+                            locate()
                         } else {
                             permissionRequest.launch(
                                 arrayOf(
@@ -378,6 +387,38 @@ fun MapScreen() {
         }
     }
 
+    locationIssue?.let { issue ->
+        AlertDialog(
+            onDismissRequest = { locationIssue = null },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        locationIssue = null
+                        val intent = when (issue) {
+                            LocationIssue.OFF -> Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                            LocationIssue.DENIED -> Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null),
+                            )
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                            // No such settings screen on this phone.
+                        }
+                    },
+                ) { Text(stringResource(R.string.open_settings)) }
+            },
+            dismissButton = { TextButton(onClick = { locationIssue = null }) { Text(stringResource(R.string.cancel)) } },
+            title = {
+                Text(stringResource(if (issue == LocationIssue.OFF) R.string.location_off_title else R.string.location_denied_title))
+            },
+            text = {
+                Text(stringResource(if (issue == LocationIssue.OFF) R.string.location_off else R.string.location_denied))
+            },
+        )
+    }
+
     pointAt?.let { point ->
         ModalBottomSheet(onDismissRequest = { pointAt = null }) {
             PointSheet(point, panoramax = panoramaxOn)
@@ -389,6 +430,13 @@ fun MapScreen() {
         if (layersOpen) cacheBytes = withContext(Dispatchers.IO) { httpCache.size() }
     }
 }
+
+/** Why the "My position" button cannot show the position. */
+private enum class LocationIssue { OFF, DENIED }
+
+/** False when location is turned off in the phone's settings. */
+private fun isLocationEnabled(context: Context): Boolean =
+    context.getSystemService(LocationManager::class.java)?.isLocationEnabled ?: true
 
 /** Map zoom of the "My position" button: the street around the phone. */
 private const val LOCATION_ZOOM = 16.0
@@ -539,7 +587,10 @@ private fun BaseMap(
         if (!component.isLocationComponentActivated) return@LaunchedEffect
         // Follows the phone until the map is moved by hand.
         component.setCameraMode(CameraMode.TRACKING, 800L, LOCATION_ZOOM, null, null, null)
-        delay(8000)
+        if (component.lastKnownLocation == null) {
+            Toast.makeText(context, R.string.location_searching, Toast.LENGTH_SHORT).show()
+        }
+        delay(10_000)
         if (component.lastKnownLocation == null) {
             Toast.makeText(context, R.string.location_unavailable, Toast.LENGTH_LONG).show()
         }
