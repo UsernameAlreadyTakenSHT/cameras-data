@@ -49,6 +49,7 @@ enum class MapLayer(
         {
           "version": 8,
           "name": "$id",
+          "glyphs": "https://$STYLE_HOST/fonts/{fontstack}/{range}.pbf",
           "sources": {
             "base": {
               "type": "raster",

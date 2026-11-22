@@ -41,7 +41,7 @@
 
     <string name="radars_title">Fixed speed cameras</string>
     <string name="radars_ready">%1$d cameras · list of %2$s</string>
-    <string name="radars_attribution">Cameras: ministère de l\'Intérieur</string>
+    <string name="radars_attribution">Speed cameras: ministère de l\'Intérieur</string>
     <string name="radar_type_etf">Fixed speed camera</string>
     <string name="radar_type_etd">Discriminating speed camera (by vehicle type)</string>
     <string name="radar_type_ett">New-generation camera (speed or crossing)</string>
@@ -89,4 +89,6 @@
     <string name="tiles_failed_title">The map does not load</string>
     <string name="tiles_blocked">%1$s, the IGN map server, is blocked on this phone by a DNS filter, an ad blocker or a VPN. Allow that domain in its settings. Downloaded areas still show.</string>
     <string name="tiles_unreachable">%1$s, the IGN map server, does not answer. Try again later; downloaded areas still show.</string>
+    <string name="my_location">My position</string>
+    <string name="location_unavailable">Position not found yet: check that location is turned on.</string>
 </resources>

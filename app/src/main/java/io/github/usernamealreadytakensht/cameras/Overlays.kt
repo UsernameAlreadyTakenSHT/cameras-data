@@ -11,6 +11,7 @@ import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonOptions
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
@@ -28,6 +29,10 @@ object Overlays {
     private const val RADARS = "radars"
     private const val CAMERAS = "cameras"
     private const val CAMERA_CLUSTERS = "camera-clusters"
+    private const val CAMERA_COUNTS = "camera-counts"
+
+    /** Font of the cluster numbers, bundled in the app (assets/fonts): digits work offline too. */
+    const val FONT = "Open Sans Semibold"
 
     /** Property of each point: position of its object in the list shown. */
     private const val INDEX = "index"
@@ -73,6 +78,7 @@ object Overlays {
     suspend fun showCameras(style: Style, cameras: List<Camera>) {
         if (cameras.isEmpty()) {
             style.removeLayer(CAMERAS)
+            style.removeLayer(CAMERA_COUNTS)
             style.removeLayer(CAMERA_CLUSTERS)
             style.removeSource(CAMERAS)
             return
@@ -108,11 +114,47 @@ object Overlays {
             PropertyFactory.circleRadius(
                 Expression.step(
                     Expression.get(POINT_COUNT), Expression.literal(8f),
-                    Expression.stop(10, 11f), Expression.stop(100, 15f), Expression.stop(1000, 20f),
+                    Expression.stop(10, 12f), Expression.stop(100, 16f), Expression.stop(1000, 21f),
                 ),
             ),
         )
         clusters.setFilter(Expression.has(POINT_COUNT))
+        // How many cameras each cluster stands for: "8", "740", "3.2k", "20k". MapLibre's own
+        // "point_count_abbreviated" prints 19 929 as "19.929000": the rounding is done here.
+        val count = Expression.get(POINT_COUNT)
+        val counts = SymbolLayer(CAMERA_COUNTS, CAMERAS).withProperties(
+            PropertyFactory.textField(
+                Expression.step(
+                    count,
+                    Expression.toString(count),
+                    Expression.stop(
+                        1000,
+                        Expression.concat(
+                            Expression.toString(
+                                Expression.division(
+                                    Expression.round(Expression.division(count, Expression.literal(100))),
+                                    Expression.literal(10),
+                                ),
+                            ),
+                            Expression.literal("k"),
+                        ),
+                    ),
+                    Expression.stop(
+                        10000,
+                        Expression.concat(
+                            Expression.toString(Expression.round(Expression.division(count, Expression.literal(1000)))),
+                            Expression.literal("k"),
+                        ),
+                    ),
+                ),
+            ),
+            PropertyFactory.textFont(arrayOf(FONT)),
+            PropertyFactory.textSize(11f),
+            PropertyFactory.textColor(WHITE),
+            PropertyFactory.textAllowOverlap(true),
+            PropertyFactory.textIgnorePlacement(true),
+        )
+        counts.setFilter(Expression.has(POINT_COUNT))
         val points = CircleLayer(CAMERAS, CAMERAS).withProperties(
             PropertyFactory.circleColor(
                 Expression.match(
@@ -136,9 +178,11 @@ object Overlays {
         // Under the speed cameras when they are shown: those are fewer, and must stay reachable.
         if (style.getLayer(RADARS) != null) {
             style.addLayerBelow(clusters, RADARS)
+            style.addLayerBelow(counts, RADARS)
             style.addLayerBelow(points, RADARS)
         } else {
             style.addLayer(clusters)
+            style.addLayer(counts)
             style.addLayer(points)
         }
     }

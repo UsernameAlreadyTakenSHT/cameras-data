@@ -89,4 +89,6 @@
     <string name="tiles_failed_title">La carte ne se charge pas</string>
     <string name="tiles_blocked">%1$s, le serveur de cartes de l\'IGN, est bloqué sur ce téléphone par un filtre DNS, un bloqueur de pub ou un VPN. Autorisez ce domaine dans ses réglages. Les zones téléchargées restent affichées.</string>
     <string name="tiles_unreachable">%1$s, le serveur de cartes de l\'IGN, ne répond pas. Réessayez plus tard ; les zones téléchargées restent affichées.</string>
+    <string name="my_location">Ma position</string>
+    <string name="location_unavailable">Position introuvable pour l\'instant : vérifiez que la localisation est activée.</string>
 </resources>

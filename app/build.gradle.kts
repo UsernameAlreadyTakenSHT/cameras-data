@@ -1,6 +1,20 @@
+import java.io.File
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Release signing, kept out of the repository: the properties file named by
+// CAMERAS_KEYSTORE_PROPERTIES, else ~/.cameras/keystore.properties. Its storeFile is relative to
+// that file. Without one, the release build stays unsigned.
+val keystorePropsFile = listOfNotNull(
+    System.getenv("CAMERAS_KEYSTORE_PROPERTIES")?.let(::File),
+    File(System.getProperty("user.home"), ".cameras/keystore.properties"),
+).firstOrNull { it.isFile }
+val keystoreProps = Properties().apply {
+    keystorePropsFile?.inputStream()?.use { load(it) }
 }
 
 android {
@@ -17,11 +31,31 @@ android {
         versionName = "0.1.1"
     }
 
+    signingConfigs {
+        if (keystoreProps.isNotEmpty()) {
+            create("release") {
+                storeFile = keystorePropsFile!!.parentFile.resolve(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // R8: code and resource shrinking (the debug variant stays unoptimised).
             optimization {
                 enable = true
             }
+            // Phones only: the x86_64 map library serves emulators. `-PallAbis` keeps it, to try
+            // the release build on an emulator.
+            if (!project.hasProperty("allAbis")) {
+                ndk {
+                    abiFilters += "arm64-v8a"
+                }
+            }
+            if (keystoreProps.isNotEmpty()) signingConfig = signingConfigs.getByName("release")
             vcsInfo.include = false
         }
     }
