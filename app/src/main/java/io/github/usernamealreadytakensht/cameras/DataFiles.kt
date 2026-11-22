@@ -100,8 +100,8 @@ class DataFiles(context: Context) {
  * The files are rebuilt on the 1st of each month in the cameras-data repository and published
  * with `data.json`, which gives the date of each. The app reads that small file and downloads
  * only the sets that changed: phones never query the source servers for whole data sets. The
- * heavy parts — the address database (about 190 MB) and the re-check of the downloaded map
- * areas — wait for an unmetered connection (Wi-Fi).
+ * heavy parts — the address database (about 190 MB) and the map files downloaded — wait for an
+ * unmetered connection (Wi-Fi).
  */
 class DataUpdater(
     context: Context,
@@ -109,7 +109,6 @@ class DataUpdater(
     private val radars: RadarStore,
     private val cameras: CameraStore,
     private val addresses: AddressStore,
-    private val maps: OfflineMaps,
 ) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -166,7 +165,11 @@ class DataUpdater(
             }
         }
 
-        if (unmetered) maps.revalidateAll() else complete = false
+        if (unmetered) {
+            if (!MapFiles.updateInstalled()) complete = false
+        } else {
+            complete = false
+        }
         return complete
     }
 

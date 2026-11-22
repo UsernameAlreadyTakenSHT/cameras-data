@@ -1,0 +1,87 @@
+name: Monthly maps
+
+# Builds the offline maps of the Cameras app from the IGN tiles: per base map, one file for the
+# whole country (zoom 0-13) and one per region (zoom 14), published as assets of the "maps"
+# release with maps.json, their list. The app downloads them on demand and renews them monthly.
+on:
+  schedule:
+    - cron: "17 2 2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      # A few areas at a time: the tiles come from a public service.
+      max-parallel: 4
+      matrix:
+        layer: [plan, photos]
+        area: [FR, "11", "24", "27", "28", "32", "44", "52", "53", "75", "76", "84", "93", "94",
+               "01", "02", "03", "04", "06"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install shapely==2.2.0 pmtiles==3.8.1
+      - name: Build
+        run: python tools/build_maps.py ${{ matrix.layer }} ${{ matrix.area }} map.pmtiles
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY: ${{ matrix.layer }}-${{ matrix.area }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          gh release view maps >/dev/null 2>&1 || gh release create maps --title "Maps" \
+            --notes "Offline maps of the Cameras app (IGN tiles, Licence Ouverte 2.0). Rebuilt every month." || true
+          # GitHub takes files up to 2 GB: larger ones go in parts, joined again by the app.
+          mkdir out
+          split -b 1900M -d -a 3 map.pmtiles "out/$KEY-$DATE.pmtiles."
+          gh release upload maps out/* --clobber
+          python - <<EOF
+          import json, os
+          parts = sorted(os.listdir("out"))
+          json.dump({"key": "$KEY", "date": "$DATE",
+                     "parts": [{"name": p, "size": os.path.getsize(os.path.join("out", p))} for p in parts]},
+                    open("$KEY.json", "w"))
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.layer }}-${{ matrix.area }}
+          path: ${{ matrix.layer }}-${{ matrix.area }}.json
+
+  list:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: built
+          merge-multiple: true
+      - name: Publish the list, then drop the files it no longer names
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release download maps -p maps.json -O old.json 2>/dev/null || echo '{"files": {}}' > old.json
+          python - <<'EOF'
+          import glob, json
+          files = json.load(open("old.json")).get("files", {})
+          # An area whose build failed this month keeps last month's file.
+          for path in glob.glob("built/*.json"):
+              built = json.load(open(path))
+              files[built["key"]] = {"date": built["date"], "parts": built["parts"]}
+          json.dump({"files": files}, open("maps.json", "w"), indent=1, sort_keys=True)
+          keep = {p["name"] for f in files.values() for p in f["parts"]} | {"maps.json"}
+          open("keep.txt", "w").write("\n".join(sorted(keep)))
+          EOF
+          gh release upload maps maps.json --clobber
+          gh release view maps --json assets -q '.assets[].name' | while read -r name; do
+            grep -qxF "$name" keep.txt || gh release delete-asset maps "$name" -y
+          done

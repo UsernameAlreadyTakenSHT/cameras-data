@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,14 +28,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 /**
- * Offline downloads of [layer], the base map on screen, by whole area: the country or one region.
- * Addresses, speed cameras and surveillance cameras need none: they come with the app.
+ * Offline maps of [layer], the base map on screen: the whole country down to the districts, and
+ * each region down to the streets. The files are built every month on GitHub and downloaded on
+ * demand. Addresses, speed cameras and surveillance cameras need nothing: they come with the app.
  */
 @Composable
-fun OfflineSheet(offline: OfflineMaps, regions: List<Region>, layer: MapLayer) {
+fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
     val context = LocalContext.current
-    val progress = offline.progress
-    var toConfirm by remember { mutableStateOf<Region?>(null) }
+    val catalog = MapFiles.catalog
+    val progress = MapFiles.progress
+    var toConfirm by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { MapFiles.refresh() }
+    fun size(bytes: Long) = Formatter.formatShortFileSize(context, bytes)
+    fun name(key: String): String {
+        val area = key.substringAfter('-')
+        return regions.firstOrNull { it.code == area }?.name ?: area
+    }
 
     Column(
         modifier = Modifier
@@ -53,28 +62,24 @@ fun OfflineSheet(offline: OfflineMaps, regions: List<Region>, layer: MapLayer) {
 
         if (progress != null) {
             Text(
-                areaTitle(progress.name, progress.layerId),
+                stringResource(R.string.area_title, name(progress.key), stringResource(layer.fullName)),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 6.dp),
             )
-            if (progress.total > 0) {
-                LinearProgressIndicator(
-                    progress = { (progress.done.toFloat() / progress.total).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    stringResource(R.string.downloading, progress.done, progress.total),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-            OutlinedButton(onClick = { offline.stop() }, modifier = Modifier.fillMaxWidth()) {
+            LinearProgressIndicator(
+                progress = { if (progress.total > 0) (progress.done.toFloat() / progress.total).coerceIn(0f, 1f) else 0f },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                stringResource(R.string.maps_progress, size(progress.done), size(progress.total)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(onClick = { MapFiles.stop() }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.stop))
             }
         }
 
-        offline.error?.let { message ->
+        MapFiles.error?.let { message ->
             Text(
                 stringResource(R.string.error_download, message),
                 style = MaterialTheme.typography.bodyMedium,
@@ -82,112 +87,93 @@ fun OfflineSheet(offline: OfflineMaps, regions: List<Region>, layer: MapLayer) {
             )
         }
 
-        if (offline.areas.isNotEmpty()) {
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            Text(stringResource(R.string.saved_title), style = MaterialTheme.typography.titleSmall)
-            offline.areas.forEach { area ->
-                val size = Formatter.formatShortFileSize(context, area.bytes)
-                val state = if (area.complete) size else stringResource(R.string.saved_incomplete, size)
-                val details = MapLayer.byId(area.layerId)
-                    ?.let { stringResource(R.string.saved_item, stringResource(it.fullName), state) }
-                    ?: state
-                AreaRow(area.name, details) {
-                    if (!area.complete) {
-                        TextButton(onClick = { offline.resume(area) }, enabled = progress == null) {
-                            Text(stringResource(R.string.resume))
-                        }
-                    }
-                    TextButton(onClick = { offline.delete(area) }) {
-                        Text(stringResource(R.string.delete))
-                    }
-                }
-            }
+        if (catalog == null) {
+            if (MapFiles.error == null) LinearProgressIndicator(Modifier.fillMaxWidth())
+            return@Column
         }
 
+        val countryKey = MapCatalog.key(layer, MapCatalog.COUNTRY)
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        Text(stringResource(R.string.maps_country_title), style = MaterialTheme.typography.titleSmall)
+        MapRow(countryKey, stringResource(R.string.maps_country), progress, ::size) { toConfirm = it }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        Text(stringResource(R.string.maps_regions_title), style = MaterialTheme.typography.titleSmall)
         Text(
-            stringResource(R.string.areas_title, stringResource(layer.fullName)),
-            style = MaterialTheme.typography.titleSmall,
+            stringResource(R.string.maps_regions_help),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        regions.forEach { region ->
-            val plan = remember(region, layer) { region.plan(layer) }
-            val saved = offline.areas.any { it.regionCode == region.code && it.layerId == layer.id }
-            val running = progress != null && progress.name == region.name && progress.layerId == layer.id
-            val details = stringResource(
-                R.string.area_estimate,
-                Formatter.formatShortFileSize(context, plan.bytes),
-                stringResource(detailLabel(plan.maxTileZoom)),
-            )
-            AreaRow(region.name, details) {
-                TextButton(onClick = { toConfirm = region }, enabled = progress == null && !saved) {
-                    Text(
-                        stringResource(
-                            when {
-                                running -> R.string.in_progress
-                                saved -> R.string.saved
-                                else -> R.string.download
-                            },
-                        ),
-                    )
-                }
-            }
+        regions.filter { it.code != MapCatalog.COUNTRY }.forEach { region ->
+            MapRow(MapCatalog.key(layer, region.code), region.name, progress, ::size) { toConfirm = it }
         }
     }
 
-    toConfirm?.let { region ->
-        val plan = region.plan(layer)
+    toConfirm?.let { key ->
+        val file = catalog?.get(key) ?: return@let
         AlertDialog(
             onDismissRequest = { toConfirm = null },
             confirmButton = {
                 TextButton(
                     onClick = {
                         toConfirm = null
-                        offline.download(region, layer)
+                        MapFiles.download(key)
                     },
-                ) {
-                    Text(stringResource(R.string.download))
-                }
+                ) { Text(stringResource(R.string.download)) }
             },
-            dismissButton = {
-                TextButton(onClick = { toConfirm = null }) { Text(stringResource(R.string.cancel)) }
-            },
-            title = { Text(areaTitle(region.name, layer.id)) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.confirm_download,
-                        Formatter.formatShortFileSize(context, plan.bytes),
-                        stringResource(detailLabel(plan.maxTileZoom)),
-                    ),
-                )
-            },
+            dismissButton = { TextButton(onClick = { toConfirm = null }) { Text(stringResource(R.string.cancel)) } },
+            title = { Text(stringResource(R.string.area_title, name(key), stringResource(layer.fullName))) },
+            text = { Text(stringResource(R.string.maps_confirm, size(file.size))) },
         )
     }
 }
 
-/** One line of a list: a title, a line of details, and its buttons on the right. */
+/** One map file: its size, its state on the phone, and what can be done with it. */
 @Composable
-private fun AreaRow(title: String, details: String, buttons: @Composable () -> Unit) {
+private fun MapRow(
+    key: String,
+    title: String,
+    progress: MapFiles.Progress?,
+    size: (Long) -> String,
+    onDownload: (String) -> Unit,
+) {
+    val published = MapFiles.catalog?.get(key)
+    val installedDate = MapFiles.installed[key]
+    val running = progress?.key == key
+    val details = when {
+        published == null && installedDate == null -> stringResource(R.string.maps_unavailable)
+        installedDate != null && published != null && published.date > installedDate ->
+            stringResource(R.string.maps_update_available, size(published.size))
+        installedDate != null -> stringResource(R.string.maps_installed, displayDate(installedDate))
+        else -> stringResource(R.string.maps_size, size(published!!.size))
+    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        buttons()
+        val newer = published != null && (installedDate == null || published.date > installedDate)
+        if (published != null && newer) {
+            TextButton(onClick = { onDownload(key) }, enabled = progress == null) {
+                Text(
+                    stringResource(
+                        when {
+                            running -> R.string.in_progress
+                            installedDate != null -> R.string.update
+                            else -> R.string.download
+                        },
+                    ),
+                )
+            }
+        }
+        if (installedDate != null) {
+            TextButton(onClick = { MapFiles.delete(key) }, enabled = !running) {
+                Text(stringResource(R.string.delete))
+            }
+        }
     }
 }
 
-/** "Bretagne — Plan IGN", or the bare name for an area saved by an earlier version. */
-@Composable
-private fun areaTitle(name: String, layerId: String?): String {
-    val layer = MapLayer.byId(layerId) ?: return name
-    return stringResource(R.string.area_title, name, stringResource(layer.fullName))
-}
-
-/** What can be told apart at the deepest tile zoom of a download. */
-private fun detailLabel(maxTileZoom: Int): Int = when {
-    maxTileZoom <= 12 -> R.string.detail_towns
-    maxTileZoom <= 14 -> R.string.detail_districts
-    maxTileZoom <= 16 -> R.string.detail_streets
-    else -> R.string.detail_buildings
-}
+/** "2026-11-23" as "23/11/2026". */
+private fun displayDate(iso: String): String =
+    iso.split('-').let { if (it.size == 3) "${it[2]}/${it[1]}/${it[0]}" else iso }

@@ -49,7 +49,7 @@ fun cacheSeconds(host: String, path: String): Int? = when {
     // Photos never change once published.
     path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".png") || path.endsWith(".webp") -> 90 * DAY_S
     host == "data.geopf.fr" && path.startsWith("/geocodage") -> 7 * DAY_S
-    host == "api.panoramax.xyz" || host == "graph.mapillary.com" -> DAY_S
+    host == "api.panoramax.xyz" -> DAY_S
     else -> null
 }
 

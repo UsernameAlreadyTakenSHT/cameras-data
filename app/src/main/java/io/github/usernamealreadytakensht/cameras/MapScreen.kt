@@ -1,10 +1,18 @@
 package io.github.usernamealreadytakensht.cameras
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.net.Uri
+import android.provider.Settings
 import android.text.format.Formatter
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,6 +46,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +83,9 @@ import kotlinx.coroutines.withContext
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.location.LocationComponentActivationOptions
+import org.maplibre.android.location.modes.CameraMode
+import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -90,14 +103,13 @@ private const val REFRESH_PAUSE_MS = 800L
 fun MapScreen() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-    val offline = remember { OfflineMaps(context.applicationContext) }
     val files = remember { DataFiles(context.applicationContext) }
     val addresses = remember { AddressStore(context.applicationContext, files) }
     val radarStore = remember { RadarStore(files) }
     val cameraStore = remember { CameraStore(files) }
     // Once a month, the data that came with the app is renewed if newer files were published.
     LaunchedEffect(Unit) {
-        DataUpdater(context.applicationContext, files, radarStore, cameraStore, addresses, offline).runIfDue()
+        DataUpdater(context.applicationContext, files, radarStore, cameraStore, addresses).runIfDue()
     }
     val regions by produceState(emptyList<Region>()) { value = Regions.load(context.applicationContext) }
     var layer by remember {
@@ -117,16 +129,24 @@ fun MapScreen() {
     var camerasOn by remember { mutableStateOf(prefs.getBoolean("cameras", false)) }
     val shownRadars = if (radarsOn) radarStore.radars else emptyList()
     val shownCameras = if (camerasOn) cameraStore.cameras else emptyList()
-    // Street photo services: off until ticked, and no request is ever sent while they are off.
+    // Street photos: off until ticked, and no request is ever sent while they are off.
     var panoramaxOn by remember { mutableStateOf(prefs.getBoolean("panoramax", false)) }
-    var mapillaryOn by remember { mutableStateOf(prefs.getBoolean("mapillary", false)) }
-    var mapillaryToken by remember { mutableStateOf(prefs.getString("mapillary_token", "").orEmpty()) }
-    var tokenDialog by remember { mutableStateOf(false) }
-    // Where the map was long-pressed: the closest photo is shown in a panel.
-    var photoAt by remember { mutableStateOf<GeoPoint?>(null) }
+    // "My position": each press asks the map to follow the phone's position.
+    var centerRequests by remember { mutableIntStateOf(0) }
+    var locationAllowed by remember { mutableStateOf(hasLocationPermission(context)) }
+    // Why the position cannot be shown, explained in a dialog that leads to the right setting.
+    var locationIssue by remember { mutableStateOf<LocationIssue?>(null) }
+    fun locate() {
+        if (isLocationEnabled(context)) centerRequests++ else locationIssue = LocationIssue.OFF
+    }
+    val permissionRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        locationAllowed = hasLocationPermission(context)
+        if (locationAllowed) locate() else locationIssue = LocationIssue.DENIED
+    }
+    // Where the map was long-pressed: a panel offers to see that place elsewhere.
+    var pointAt by remember { mutableStateOf<GeoPoint?>(null) }
     var cacheBytes by remember { mutableStateOf(0L) }
     val scope = rememberCoroutineScope()
-    val photosOn by rememberUpdatedState(panoramaxOn || (mapillaryOn && mapillaryToken.isNotEmpty()))
     // The point touched on the map, described by a card: a Radar or a Camera.
     var touched by remember { mutableStateOf<Any?>(null) }
 
@@ -143,7 +163,7 @@ fun MapScreen() {
 
     // A long download must not be cut by the screen going to sleep.
     val view = LocalView.current
-    val downloading = offline.progress?.manual == true
+    val downloading = MapFiles.progress != null
     DisposableEffect(view, downloading) {
         view.keepScreenOn = downloading
         onDispose { view.keepScreenOn = false }
@@ -154,7 +174,9 @@ fun MapScreen() {
             layer = layer,
             radars = shownRadars,
             cameras = shownCameras,
-            onLongPress = { point -> if (photosOn) photoAt = point },
+            locationAllowed = locationAllowed,
+            centerRequests = centerRequests,
+            onLongPress = { point -> pointAt = point },
             onTouched = { hit ->
                 touched = when (hit) {
                     is Touched.OfRadar -> shownRadars.getOrNull(hit.index)
@@ -188,13 +210,38 @@ fun MapScreen() {
                     .weight(1f, fill = false)
                     .padding(end = 8.dp),
             )
-            ElevatedButton(
-                onClick = {
-                    offline.refresh()
-                    sheetOpen = true
-                },
-            ) {
-                Text(stringResource(R.string.offline_button), maxLines = 1)
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                FilledTonalIconButton(
+                    onClick = {
+                        if (locationAllowed) {
+                            locate()
+                        } else {
+                            permissionRequest.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ),
+                            )
+                        }
+                    },
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    modifier = Modifier
+                        .shadow(3.dp, CircleShape)
+                        .size(48.dp),
+                ) {
+                    Icon(painterResource(R.drawable.ic_my_location), stringResource(R.string.my_location))
+                }
+                ElevatedButton(
+                    onClick = {
+                        MapFiles.refresh(force = true)
+                        sheetOpen = true
+                    },
+                ) {
+                    Text(stringResource(R.string.offline_button), maxLines = 1)
+                }
             }
         }
 
@@ -206,6 +253,20 @@ fun MapScreen() {
         when (val point = touched) {
             is Radar -> RadarCard(point, onClose = { touched = null }, modifier = cardModifier)
             is Camera -> CameraCard(point, onClose = { touched = null }, modifier = cardModifier)
+        }
+
+        // Why the map stays empty, under the search bar.
+        val tileProblem = TileHealth.problem
+        if (tileProblem != null && !TileHealth.dismissed) {
+            TileProblemBanner(
+                tileProblem,
+                onClose = { TileHealth.dismissed = true },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(start = 12.dp, end = 12.dp, top = 76.dp)
+                    .fillMaxWidth(),
+            )
         }
 
         // Last, so that the search results cover the buttons below them.
@@ -275,6 +336,7 @@ fun MapScreen() {
                         prefs.edit().putBoolean("cameras", camerasOn).apply()
                         if (!camerasOn && touched is Camera) touched = null
                     }
+                    if (camerasOn) CameraLegend()
                     OverlayItem(
                         checked = radarsOn,
                         title = stringResource(R.string.radars_title),
@@ -294,25 +356,6 @@ fun MapScreen() {
                         layersOpen = false
                         panoramaxOn = !panoramaxOn
                         prefs.edit().putBoolean("panoramax", panoramaxOn).apply()
-                    }
-                    OverlayItem(
-                        checked = mapillaryOn && mapillaryToken.isNotEmpty(),
-                        title = stringResource(R.string.photos_mapillary),
-                        status = stringResource(
-                            when {
-                                mapillaryOn && mapillaryToken.isNotEmpty() -> R.string.photos_hint
-                                else -> R.string.photos_off_token
-                            },
-                        ),
-                    ) {
-                        layersOpen = false
-                        if (mapillaryOn && mapillaryToken.isNotEmpty()) {
-                            mapillaryOn = false
-                            prefs.edit().putBoolean("mapillary", false).apply()
-                        } else {
-                            // Turned on only once a token is given.
-                            tokenDialog = true
-                        }
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
@@ -339,32 +382,98 @@ fun MapScreen() {
 
     if (sheetOpen) {
         ModalBottomSheet(onDismissRequest = { sheetOpen = false }) {
-            OfflineSheet(offline, regions, layer)
+            OfflineSheet(regions, layer)
         }
     }
 
-    photoAt?.let { point ->
-        ModalBottomSheet(onDismissRequest = { photoAt = null }) {
-            PhotoSheet(point, panoramaxOn, mapillaryToken.takeIf { mapillaryOn && it.isNotEmpty() })
-        }
-    }
-
-    if (tokenDialog) {
-        MapillaryTokenDialog(
-            current = mapillaryToken,
-            onDone = { token ->
-                tokenDialog = false
-                mapillaryToken = token
-                mapillaryOn = token.isNotEmpty()
-                prefs.edit().putString("mapillary_token", token).putBoolean("mapillary", mapillaryOn).apply()
+    locationIssue?.let { issue ->
+        AlertDialog(
+            onDismissRequest = { locationIssue = null },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        locationIssue = null
+                        val intent = when (issue) {
+                            LocationIssue.OFF -> Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                            LocationIssue.DENIED -> Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null),
+                            )
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                            // No such settings screen on this phone.
+                        }
+                    },
+                ) { Text(stringResource(R.string.open_settings)) }
             },
-            onDismiss = { tokenDialog = false },
+            dismissButton = { TextButton(onClick = { locationIssue = null }) { Text(stringResource(R.string.cancel)) } },
+            title = {
+                Text(stringResource(if (issue == LocationIssue.OFF) R.string.location_off_title else R.string.location_denied_title))
+            },
+            text = {
+                Text(stringResource(if (issue == LocationIssue.OFF) R.string.location_off else R.string.location_denied))
+            },
         )
+    }
+
+    pointAt?.let { point ->
+        ModalBottomSheet(onDismissRequest = { pointAt = null }) {
+            PointSheet(point, panoramax = panoramaxOn)
+        }
     }
 
     // The size shown in the menu is read each time it opens.
     LaunchedEffect(layersOpen) {
         if (layersOpen) cacheBytes = withContext(Dispatchers.IO) { httpCache.size() }
+    }
+}
+
+/** Why the "My position" button cannot show the position. */
+private enum class LocationIssue { OFF, DENIED }
+
+/** False when location is turned off in the phone's settings. */
+private fun isLocationEnabled(context: Context): Boolean =
+    context.getSystemService(LocationManager::class.java)?.isLocationEnabled ?: true
+
+/** Map zoom of the "My position" button: the street around the phone. */
+private const val LOCATION_ZOOM = 16.0
+
+private fun hasLocationPermission(context: Context) =
+    context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+/** Turns on the blue dot of the phone's position, read from Android itself (no Google service). */
+@SuppressLint("MissingPermission")
+private fun showLocation(context: Context, map: MapLibreMap, style: Style) {
+    val component = map.locationComponent
+    component.activateLocationComponent(
+        LocationComponentActivationOptions.builder(context, style).useDefaultLocationEngine(true).build(),
+    )
+    component.isLocationComponentEnabled = true
+    component.renderMode = RenderMode.NORMAL
+}
+
+/** Colour of each kind of camera, under the cameras item of the layers menu. */
+@Composable
+private fun CameraLegend() {
+    Column(
+        Modifier.padding(start = 64.dp, end = 16.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        CameraKind.entries.forEach { kind ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val color = Color(android.graphics.Color.parseColor(kind.color))
+                Canvas(Modifier.size(10.dp)) { drawCircle(color) }
+                Text(
+                    stringResource(kind.label),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
     }
 }
 
@@ -396,6 +505,8 @@ private fun BaseMap(
     layer: MapLayer,
     radars: List<Radar>,
     cameras: List<Camera>,
+    locationAllowed: Boolean,
+    centerRequests: Int,
     onLongPress: (GeoPoint) -> Unit,
     onTouched: (Touched?) -> Unit,
     onReady: (MapLibreMap) -> Unit,
@@ -413,6 +524,8 @@ private fun BaseMap(
     val mapView = remember {
         MapView(context).apply {
             onCreate(null)
+            // A style that cannot be read leaves the map blank: at least the log says why.
+            addOnDidFailLoadingMapListener { message -> android.util.Log.e("Cameras", "map failed to load: $message") }
             getMapAsync { ready ->
                 ready.setMaxZoomPreference(20.0)
                 ready.uiSettings.apply {
@@ -448,9 +561,9 @@ private fun BaseMap(
         }
     }
 
-    LaunchedEffect(map, layer) {
+    LaunchedEffect(map, layer, MapFiles.version) {
         style = null
-        map?.setStyle(Style.Builder().fromUri(layer.styleUrl)) { style = it }
+        map?.setStyle(Style.Builder().fromUri(layer.styleUrl(MapFiles.version))) { style = it }
     }
 
     // A new base map means a new style: the overlays are put back on each of them.
@@ -459,6 +572,29 @@ private fun BaseMap(
     }
     LaunchedEffect(style, cameras) {
         style?.let { Overlays.showCameras(it, cameras) }
+    }
+
+    // The phone's position, as a blue dot: shown once allowed, on each new base map.
+    LaunchedEffect(style, locationAllowed) {
+        val loaded = style ?: return@LaunchedEffect
+        val shown = map ?: return@LaunchedEffect
+        if (locationAllowed && hasLocationPermission(context)) showLocation(context, shown, loaded)
+    }
+    LaunchedEffect(centerRequests) {
+        if (centerRequests == 0) return@LaunchedEffect
+        // The dot may still be waiting for its base map: give it a moment.
+        repeat(20) { if (map?.locationComponent?.isLocationComponentActivated != true) delay(250) }
+        val component = map?.locationComponent ?: return@LaunchedEffect
+        if (!component.isLocationComponentActivated) return@LaunchedEffect
+        // Follows the phone until the map is moved by hand.
+        component.setCameraMode(CameraMode.TRACKING, 800L, LOCATION_ZOOM, null, null, null)
+        if (component.lastKnownLocation == null) {
+            Toast.makeText(context, R.string.location_searching, Toast.LENGTH_SHORT).show()
+        }
+        delay(10_000)
+        if (component.lastKnownLocation == null) {
+            Toast.makeText(context, R.string.location_unavailable, Toast.LENGTH_LONG).show()
+        }
     }
 
     DisposableEffect(lifecycle, mapView) {
@@ -578,6 +714,37 @@ private fun CameraCard(camera: Camera, onClose: () -> Unit, modifier: Modifier =
         onClose = onClose,
         modifier = modifier,
     )
+}
+
+/** Says why the map stays empty, and what to do about it. */
+@Composable
+private fun TileProblemBanner(problem: TileProblem, onClose: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shadowElevation = 3.dp,
+    ) {
+        Row(Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.tiles_failed_title), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(
+                        when (problem) {
+                            TileProblem.BLOCKED -> R.string.tiles_blocked
+                            TileProblem.UNREACHABLE -> R.string.tiles_unreachable
+                        },
+                        TileHealth.TILE_HOST,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            IconButton(onClick = onClose) {
+                Text("✕", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
 }
 
 /** Card describing the point touched on the map, with the dot of its colour. */

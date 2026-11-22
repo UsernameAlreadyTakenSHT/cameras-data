@@ -22,38 +22,18 @@ class StreetPhotosTest {
         assertEquals(
             listOf(
                 StreetPhoto(
-                    PhotoProvider.PANORAMAX, "https://storage.example/sd.jpg", 48.858318, 2.294545, "2025-10-10",
+                    "https://storage.example/sd.jpg", 48.858318, 2.294545, "2025-10-10",
                     "someone", "etalab-2.0", "https://api.panoramax.xyz/#focus=pic&pic=afd9aa9b-6737",
                 ),
             ),
-            StreetPhotos.parsePanoramax(json),
+            StreetPhotos.parse(json),
         )
-        assertEquals(emptyList<StreetPhoto>(), StreetPhotos.parsePanoramax("""{"features": []}"""))
-    }
-
-    @Test
-    fun readsAMapillaryAnswer() {
-        val json = """
-            {"data": [
-              {"id": "1234567890", "thumb_1024_url": "https://scontent.example/photo.jpg",
-               "captured_at": 1760086043000, "creator": {"username": "mapper", "id": "1"},
-               "computed_geometry": {"type": "Point", "coordinates": [2.3522, 48.8566]}}
-            ]}
-        """.trimIndent()
-        assertEquals(
-            listOf(
-                StreetPhoto(
-                    PhotoProvider.MAPILLARY, "https://scontent.example/photo.jpg", 48.8566, 2.3522, "2025-10-10",
-                    "mapper", "CC BY-SA 4.0", "https://www.mapillary.com/app/?pKey=1234567890",
-                ),
-            ),
-            StreetPhotos.parseMapillary(json),
-        )
+        assertEquals(emptyList<StreetPhoto>(), StreetPhotos.parse("""{"features": []}"""))
     }
 
     @Test
     fun picksTheClosestPhoto() {
-        fun photo(lat: Double, lon: Double) = StreetPhoto(PhotoProvider.PANORAMAX, "u", lat, lon, "", "", "", "")
+        fun photo(lat: Double, lon: Double) = StreetPhoto("u", lat, lon, "", "", "", "")
         val point = GeoPoint(48.8584, 2.2945)
         val near = photo(48.85842, 2.29452)
         assertEquals(near, StreetPhotos.nearest(listOf(photo(48.8590, 2.2945), near, photo(48.8584, 2.2955)), point))
@@ -68,5 +48,21 @@ class StreetPhotosTest {
         assertEquals(0.00045, box.north - 48.8584, 0.00001)
         assertEquals(0.00068, box.east - 2.2945, 0.00001)
         assertEquals(0.00068, 2.2945 - box.west, 0.00001)
+    }
+
+    @Test
+    fun linksToTheSamePlaceInOtherServices() {
+        // The decimal point stays a point whatever the phone's language.
+        val point = GeoPoint(48.8584, -2.2945)
+        assertEquals("https://www.mapillary.com/app/?lat=48.858400&lng=-2.294500&z=17", ExternalMap.MAPILLARY.url(point))
+        assertEquals(
+            "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=48.858400,-2.294500",
+            ExternalMap.GOOGLE_STREET_VIEW.url(point),
+        )
+        assertEquals(
+            "https://www.google.com/maps/search/?api=1&query=48.858400,-2.294500",
+            ExternalMap.GOOGLE_MAPS.url(point),
+        )
+        assertEquals("https://maps.apple.com/?ll=48.858400,-2.294500&q=48.858400,-2.294500", ExternalMap.APPLE_MAPS.url(point))
     }
 }

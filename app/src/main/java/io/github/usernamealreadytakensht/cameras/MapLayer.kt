@@ -1,6 +1,7 @@
 package io.github.usernamealreadytakensht.cameras
 
 import androidx.annotation.StringRes
+import java.io.File
 
 /** Host of the generated map styles: never resolved, see [LocalStyleInterceptor]. */
 const val STYLE_HOST = "style.cameras.invalid"
@@ -36,20 +37,40 @@ enum class MapLayer(
         maxTileZoom = 19,
     );
 
-    /** Address of this layer's style, used both by the map and by the offline downloads. */
-    val styleUrl: String
-        get() = "https://$STYLE_HOST/$id.json"
+    /**
+     * Address of this layer's style on the map. [version] changes whenever a map file of the
+     * layer is downloaded or deleted, so that the map loads the style again.
+     */
+    fun styleUrl(version: Int = 0): String = "https://$STYLE_HOST/$id.json?v=$version"
+
+    /** Address of the style the region downloads use: the online tiles alone. */
+    val downloadStyleUrl: String
+        get() = "https://$STYLE_HOST/$id-online.json"
 
     private val tileUrl: String
         get() = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=$wmtsLayer" +
             "&STYLE=normal&FORMAT=$format&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
 
-    /** MapLibre style showing this layer alone. */
-    fun styleJson(): String = """
+    /**
+     * MapLibre style showing this layer. [local], the map files downloaded (the country first, then
+     * regions), are drawn under the online tiles: they fill in wherever those do not load.
+     */
+    fun styleJson(local: List<File> = emptyList()): String {
+        val localSources = local.withIndex().joinToString("") { (i, file) ->
+            // Forward slashes whatever the system: a backslash would be an escape in the JSON.
+            val path = file.absolutePath.replace('\\', '/')
+            """
+            "local$i": { "type": "raster", "url": "pmtiles://file://$path", "tileSize": 256 },"""
+        }
+        val localLayers = local.indices.joinToString("") { i ->
+            """{ "id": "local$i", "type": "raster", "source": "local$i" },"""
+        }
+        return """
         {
           "version": 8,
           "name": "$id",
-          "sources": {
+          "glyphs": "https://$STYLE_HOST/fonts/{fontstack}/{range}.pbf",
+          "sources": {$localSources
             "base": {
               "type": "raster",
               "tiles": ["$tileUrl"],
@@ -61,10 +82,12 @@ enum class MapLayer(
           },
           "layers": [
             { "id": "background", "type": "background", "paint": { "background-color": "#dde3e8" } },
+            $localLayers
             { "id": "base", "type": "raster", "source": "base" }
           ]
         }
-    """.trimIndent()
+        """.trimIndent()
+    }
 
     /**
      * Typical size of one tile at [zoom], for the estimates shown before downloading. Measured on

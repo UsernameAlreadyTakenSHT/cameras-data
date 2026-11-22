@@ -9,25 +9,12 @@
 
     <string name="offline_button">Offline</string>
     <string name="offline_title">Offline</string>
-    <string name="offline_help">Downloads the base map on screen (%1$s) over a whole area. To download another base map, select it on the map first. Areas you browse online are also kept in cache automatically. Addresses, speed cameras and surveillance cameras need no download: they come with the app.</string>
-    <string name="areas_title">Download %1$s</string>
+    <string name="offline_help">Maps of %1$s to view without a connection, downloaded once and renewed every month. To download another base map, select it on the map first. Addresses, speed cameras and surveillance cameras need no download: they come with the app.</string>
     <string name="area_title">%1$s — %2$s</string>
-    <string name="area_estimate">About %1$s · detail: %2$s</string>
-    <string name="detail_towns">towns and roads</string>
-    <string name="detail_districts">districts</string>
-    <string name="detail_streets">streets</string>
-    <string name="detail_buildings">buildings</string>
-    <string name="confirm_download">About %1$s to download (detail: %2$s). Wi-Fi recommended. Keep the app open: the download stops if it is closed, and can be resumed later.</string>
     <string name="download">Download</string>
     <string name="in_progress">In progress</string>
-    <string name="saved">Downloaded</string>
-    <string name="downloading">Downloading… %1$d / %2$d</string>
     <string name="stop">Stop</string>
     <string name="cancel">Cancel</string>
-    <string name="saved_title">Downloaded areas</string>
-    <string name="saved_item">%1$s · %2$s</string>
-    <string name="saved_incomplete">incomplete, %1$s</string>
-    <string name="resume">Resume</string>
     <string name="delete">Delete</string>
     <string name="error_download">Download error: %1$s</string>
 
@@ -41,7 +28,7 @@
 
     <string name="radars_title">Fixed speed cameras</string>
     <string name="radars_ready">%1$d cameras · list of %2$s</string>
-    <string name="radars_attribution">Cameras: ministère de l\'Intérieur</string>
+    <string name="radars_attribution">Speed cameras: ministère de l\'Intérieur</string>
     <string name="radar_type_etf">Fixed speed camera</string>
     <string name="radar_type_etd">Discriminating speed camera (by vehicle type)</string>
     <string name="radar_type_ett">New-generation camera (speed or crossing)</string>
@@ -72,18 +59,42 @@
     <string name="camera_source">OpenStreetMap</string>
     <string name="search_preparing">No connection. The addresses are being prepared (first launch): try again in a moment.</string>
 
-    <string name="ok">OK</string>
     <string name="photos_panoramax">Panoramax street photos</string>
-    <string name="photos_mapillary">Mapillary street photos</string>
     <string name="photos_off">Off: no request is sent</string>
-    <string name="photos_off_token">Off: no request is sent · needs an access token</string>
     <string name="photos_hint">On: long-press the map to see the closest photo</string>
     <string name="photos_title">Street photo</string>
     <string name="photos_none">No photo within %1$d m of this point.</string>
     <string name="photos_failed">The photo could not be fetched: %1$s</string>
-    <string name="photos_open">Open on %1$s</string>
-    <string name="mapillary_token">Access token</string>
-    <string name="mapillary_token_help">Mapillary only answers with the access token of a developer account (mapillary.com › Developers). Paste yours here; it stays on this phone. Leave empty to turn Mapillary off.</string>
     <string name="cache_clear">Clear the cache</string>
     <string name="cache_size">%1$s of photos and online searches</string>
+    <string name="see_elsewhere">See this place in another service (opens outside the app)</string>
+    <string name="see_in_panoramax">See in Panoramax</string>
+    <string name="see_in_mapillary">See in Mapillary</string>
+    <string name="see_in_street_view">See in Google Street View</string>
+    <string name="see_in_google_maps">See in Google Maps</string>
+    <string name="see_in_apple_maps">See in Apple Maps</string>
+    <string name="tiles_failed_title">The map does not load</string>
+    <string name="tiles_blocked">%1$s, the IGN map server, is blocked on this phone by a DNS filter, an ad blocker or a VPN. Allow that domain in its settings. Downloaded areas still show.</string>
+    <string name="tiles_unreachable">%1$s, the IGN map server, does not answer. Try again later; downloaded areas still show.</string>
+    <string name="my_location">My position</string>
+    <string name="location_unavailable">Position not found yet: check that location is turned on.</string>
+    <string name="location_searching">Looking for your position…</string>
+    <string name="location_off_title">Location is turned off</string>
+    <string name="location_off">Turn on location in the phone\'s settings to show your position on the map.</string>
+    <string name="location_denied_title">Location not allowed</string>
+    <string name="location_denied">The app is not allowed to read your position. Allow it in the app\'s settings, under Permissions › Location.</string>
+    <string name="open_settings">Open settings</string>
+    <string name="maps_no_space">Not enough free space on the phone for this map.</string>
+    <string name="maps_not_published">The offline maps are not published yet: try again in a few days.</string>
+    <string name="maps_country_title">Whole country</string>
+    <string name="maps_country">France — districts (zoom 13)</string>
+    <string name="maps_regions_title">Regions — streets (zoom 14)</string>
+    <string name="maps_regions_help">Adds the streets to the whole country map: download it as well.</string>
+    <string name="maps_size">%1$s</string>
+    <string name="maps_installed">Downloaded · map of %1$s</string>
+    <string name="maps_update_available">Downloaded · newer map available (%1$s)</string>
+    <string name="maps_unavailable">Not published yet</string>
+    <string name="maps_progress">%1$s of %2$s</string>
+    <string name="maps_confirm">%1$s to download from GitHub. Wi-Fi recommended. The download stops if the app is closed, and goes on from there next time.</string>
+    <string name="update">Update</string>
 </resources>
