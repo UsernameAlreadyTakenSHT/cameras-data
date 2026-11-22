@@ -117,16 +117,12 @@ fun MapScreen() {
     var camerasOn by remember { mutableStateOf(prefs.getBoolean("cameras", false)) }
     val shownRadars = if (radarsOn) radarStore.radars else emptyList()
     val shownCameras = if (camerasOn) cameraStore.cameras else emptyList()
-    // Street photo services: off until ticked, and no request is ever sent while they are off.
+    // Street photos: off until ticked, and no request is ever sent while they are off.
     var panoramaxOn by remember { mutableStateOf(prefs.getBoolean("panoramax", false)) }
-    var mapillaryOn by remember { mutableStateOf(prefs.getBoolean("mapillary", false)) }
-    var mapillaryToken by remember { mutableStateOf(prefs.getString("mapillary_token", "").orEmpty()) }
-    var tokenDialog by remember { mutableStateOf(false) }
-    // Where the map was long-pressed: the closest photo is shown in a panel.
-    var photoAt by remember { mutableStateOf<GeoPoint?>(null) }
+    // Where the map was long-pressed: a panel offers to see that place elsewhere.
+    var pointAt by remember { mutableStateOf<GeoPoint?>(null) }
     var cacheBytes by remember { mutableStateOf(0L) }
     val scope = rememberCoroutineScope()
-    val photosOn by rememberUpdatedState(panoramaxOn || (mapillaryOn && mapillaryToken.isNotEmpty()))
     // The point touched on the map, described by a card: a Radar or a Camera.
     var touched by remember { mutableStateOf<Any?>(null) }
 
@@ -154,7 +150,7 @@ fun MapScreen() {
             layer = layer,
             radars = shownRadars,
             cameras = shownCameras,
-            onLongPress = { point -> if (photosOn) photoAt = point },
+            onLongPress = { point -> pointAt = point },
             onTouched = { hit ->
                 touched = when (hit) {
                     is Touched.OfRadar -> shownRadars.getOrNull(hit.index)
@@ -295,25 +291,6 @@ fun MapScreen() {
                         panoramaxOn = !panoramaxOn
                         prefs.edit().putBoolean("panoramax", panoramaxOn).apply()
                     }
-                    OverlayItem(
-                        checked = mapillaryOn && mapillaryToken.isNotEmpty(),
-                        title = stringResource(R.string.photos_mapillary),
-                        status = stringResource(
-                            when {
-                                mapillaryOn && mapillaryToken.isNotEmpty() -> R.string.photos_hint
-                                else -> R.string.photos_off_token
-                            },
-                        ),
-                    ) {
-                        layersOpen = false
-                        if (mapillaryOn && mapillaryToken.isNotEmpty()) {
-                            mapillaryOn = false
-                            prefs.edit().putBoolean("mapillary", false).apply()
-                        } else {
-                            // Turned on only once a token is given.
-                            tokenDialog = true
-                        }
-                    }
                     HorizontalDivider()
                     DropdownMenuItem(
                         leadingIcon = { Spacer(Modifier.size(24.dp)) },
@@ -343,23 +320,10 @@ fun MapScreen() {
         }
     }
 
-    photoAt?.let { point ->
-        ModalBottomSheet(onDismissRequest = { photoAt = null }) {
-            PhotoSheet(point, panoramaxOn, mapillaryToken.takeIf { mapillaryOn && it.isNotEmpty() })
+    pointAt?.let { point ->
+        ModalBottomSheet(onDismissRequest = { pointAt = null }) {
+            PointSheet(point, panoramax = panoramaxOn)
         }
-    }
-
-    if (tokenDialog) {
-        MapillaryTokenDialog(
-            current = mapillaryToken,
-            onDone = { token ->
-                tokenDialog = false
-                mapillaryToken = token
-                mapillaryOn = token.isNotEmpty()
-                prefs.edit().putString("mapillary_token", token).putBoolean("mapillary", mapillaryOn).apply()
-            },
-            onDismiss = { tokenDialog = false },
-        )
     }
 
     // The size shown in the menu is read each time it opens.

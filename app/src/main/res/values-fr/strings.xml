@@ -72,18 +72,18 @@
     <string name="camera_source">OpenStreetMap</string>
     <string name="search_preparing">Hors connexion. Les adresses sont en cours de préparation (premier lancement) : réessayez dans un instant.</string>
 
-    <string name="ok">OK</string>
     <string name="photos_panoramax">Photos de rue Panoramax</string>
-    <string name="photos_mapillary">Photos de rue Mapillary</string>
     <string name="photos_off">Désactivé : aucune requête envoyée</string>
-    <string name="photos_off_token">Désactivé : aucune requête envoyée · jeton d\'accès requis</string>
     <string name="photos_hint">Activé : appui long sur la carte pour voir la photo la plus proche</string>
     <string name="photos_title">Photo de rue</string>
     <string name="photos_none">Aucune photo à moins de %1$d m de ce point.</string>
     <string name="photos_failed">La photo n\'a pas pu être récupérée : %1$s</string>
-    <string name="photos_open">Ouvrir sur %1$s</string>
-    <string name="mapillary_token">Jeton d\'accès</string>
-    <string name="mapillary_token_help">Mapillary ne répond qu\'avec le jeton d\'accès d\'un compte développeur (mapillary.com › Developers). Collez le vôtre ici ; il reste sur ce téléphone. Laissez vide pour désactiver Mapillary.</string>
     <string name="cache_clear">Vider le cache</string>
     <string name="cache_size">%1$s de photos et de recherches en ligne</string>
+    <string name="see_elsewhere">Voir cet endroit dans un autre service (s\'ouvre hors de l\'appli)</string>
+    <string name="see_in_panoramax">Voir dans Panoramax</string>
+    <string name="see_in_mapillary">Voir dans Mapillary</string>
+    <string name="see_in_street_view">Voir dans Google Street View</string>
+    <string name="see_in_google_maps">Voir dans Google Maps</string>
+    <string name="see_in_apple_maps">Voir dans Apple Plans</string>
 </resources>

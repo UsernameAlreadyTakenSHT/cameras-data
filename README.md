@@ -15,9 +15,10 @@ Télécharger l'APK : [Releases](../../releases).
 - **Radars fixes** : type, vitesse limite, date de mise en service. Aucune alerte en conduite.
 - **Recherche** : adresse ou lieu, coordonnées (`48.8566, 2.3522`, `48°51'24"N 2°21'08"E`…) ou
   geohash (`u09tunqu`).
-- **Photos de rue** Panoramax et Mapillary, désactivées par défaut : aucune requête tant qu'une
-  case n'est pas cochée. Ensuite, un appui long sur la carte affiche la photo la plus proche.
-  Mapillary demande le jeton d'accès d'un compte développeur.
+- **Appui long sur la carte** : liens « Voir dans » Mapillary, Google Street View, Google Maps et
+  Apple Plans, qui s'ouvrent hors de l'appli.
+- **Photos de rue Panoramax**, désactivées par défaut : aucune requête tant que la case n'est pas
+  cochée. Ensuite, l'appui long affiche aussi la photo la plus proche.
 
 ## En ligne et hors-ligne
 
@@ -30,7 +31,7 @@ en ligne, plus récentes.
 | Adresses | base nationale intégrée (26 millions d'adresses) | géocodage de l'IGN |
 | Caméras | fichier intégré | la zone affichée est relue dans OpenStreetMap |
 | Radars | liste intégrée | — |
-| Photos de rue | celles déjà vues (cache) | Panoramax, Mapillary |
+| Photos de rue | celles déjà vues (cache) | Panoramax |
 
 **Mise à jour mensuelle.** Le 1er de chaque mois, une tâche GitHub Actions
 (`.github/workflows/data.yml`) refabrique les adresses, les caméras et les radars et les publie
@@ -62,6 +63,6 @@ L'APK sort dans `app/build/outputs/apk/debug/` (environ 290 Mo). Tests :
 | Adresses | [Base Adresse Nationale](https://adresse.data.gouv.fr/) | Licence Ouverte 2.0 |
 | Caméras | © contributeurs [OpenStreetMap](https://www.openstreetmap.org/copyright) | ODbL |
 | Radars | [Ministère de l'Intérieur](https://www.data.gouv.fr/datasets/liste-des-radars-fixes-en-france) | Licence Ouverte 2.0 |
-| Photos de rue | [Panoramax](https://panoramax.fr/), [Mapillary](https://www.mapillary.com/) | ouverte, CC BY-SA 4.0 |
+| Photos de rue | [Panoramax](https://panoramax.fr/) | licences ouvertes |
 
 La carte est affichée par [MapLibre Native](https://maplibre.org/), sans clé d'API.

@@ -72,18 +72,18 @@
     <string name="camera_source">OpenStreetMap</string>
     <string name="search_preparing">No connection. The addresses are being prepared (first launch): try again in a moment.</string>
 
-    <string name="ok">OK</string>
     <string name="photos_panoramax">Panoramax street photos</string>
-    <string name="photos_mapillary">Mapillary street photos</string>
     <string name="photos_off">Off: no request is sent</string>
-    <string name="photos_off_token">Off: no request is sent · needs an access token</string>
     <string name="photos_hint">On: long-press the map to see the closest photo</string>
     <string name="photos_title">Street photo</string>
     <string name="photos_none">No photo within %1$d m of this point.</string>
     <string name="photos_failed">The photo could not be fetched: %1$s</string>
-    <string name="photos_open">Open on %1$s</string>
-    <string name="mapillary_token">Access token</string>
-    <string name="mapillary_token_help">Mapillary only answers with the access token of a developer account (mapillary.com › Developers). Paste yours here; it stays on this phone. Leave empty to turn Mapillary off.</string>
     <string name="cache_clear">Clear the cache</string>
     <string name="cache_size">%1$s of photos and online searches</string>
+    <string name="see_elsewhere">See this place in another service (opens outside the app)</string>
+    <string name="see_in_panoramax">See in Panoramax</string>
+    <string name="see_in_mapillary">See in Mapillary</string>
+    <string name="see_in_street_view">See in Google Street View</string>
+    <string name="see_in_google_maps">See in Google Maps</string>
+    <string name="see_in_apple_maps">See in Apple Maps</string>
 </resources>
