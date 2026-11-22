@@ -37,9 +37,13 @@ class CamerasApp : Application() {
                 }
             }
             .build()
+        TileHealth.init(this)
         HttpRequestUtil.setOkHttpClient(
             OkHttpClient.Builder()
                 .addInterceptor(LocalStyleInterceptor())
+                // Tells the map why it stays empty, when the tile server cannot be reached.
+                .addInterceptor(TileHealth.interceptor)
+                .dns(TileHealth.dns)
                 // Few parallel requests, to stay a light client of the public tile server.
                 .dispatcher(Dispatcher().apply { maxRequestsPerHost = 4 })
                 .build(),

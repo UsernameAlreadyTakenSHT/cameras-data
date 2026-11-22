@@ -204,6 +204,20 @@ fun MapScreen() {
             is Camera -> CameraCard(point, onClose = { touched = null }, modifier = cardModifier)
         }
 
+        // Why the map stays empty, under the search bar.
+        val tileProblem = TileHealth.problem
+        if (tileProblem != null && !TileHealth.dismissed) {
+            TileProblemBanner(
+                tileProblem,
+                onClose = { TileHealth.dismissed = true },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(start = 12.dp, end = 12.dp, top = 76.dp)
+                    .fillMaxWidth(),
+            )
+        }
+
         // Last, so that the search results cover the buttons below them.
         Row(
             modifier = Modifier
@@ -542,6 +556,37 @@ private fun CameraCard(camera: Camera, onClose: () -> Unit, modifier: Modifier =
         onClose = onClose,
         modifier = modifier,
     )
+}
+
+/** Says why the map stays empty, and what to do about it. */
+@Composable
+private fun TileProblemBanner(problem: TileProblem, onClose: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shadowElevation = 3.dp,
+    ) {
+        Row(Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.tiles_failed_title), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(
+                        when (problem) {
+                            TileProblem.BLOCKED -> R.string.tiles_blocked
+                            TileProblem.UNREACHABLE -> R.string.tiles_unreachable
+                        },
+                        TileHealth.TILE_HOST,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            IconButton(onClick = onClose) {
+                Text("✕", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
 }
 
 /** Card describing the point touched on the map, with the dot of its colour. */

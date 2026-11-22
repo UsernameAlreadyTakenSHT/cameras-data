@@ -86,4 +86,7 @@
     <string name="see_in_street_view">See in Google Street View</string>
     <string name="see_in_google_maps">See in Google Maps</string>
     <string name="see_in_apple_maps">See in Apple Maps</string>
+    <string name="tiles_failed_title">The map does not load</string>
+    <string name="tiles_blocked">%1$s, the IGN map server, is blocked on this phone by a DNS filter, an ad blocker or a VPN. Allow that domain in its settings. Downloaded areas still show.</string>
+    <string name="tiles_unreachable">%1$s, the IGN map server, does not answer. Try again later; downloaded areas still show.</string>
 </resources>
