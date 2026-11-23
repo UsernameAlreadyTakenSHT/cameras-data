@@ -41,6 +41,7 @@ fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
     val catalog = MapFiles.catalog
     val progress = MapFiles.progress
     var toConfirm by remember { mutableStateOf<String?>(null) }
+    var toDelete by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { MapFiles.refresh() }
     fun size(bytes: Long) = Formatter.formatShortFileSize(context, bytes)
     fun name(key: String): String {
@@ -100,7 +101,7 @@ fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
         val countryKey = MapCatalog.key(layer, MapCatalog.COUNTRY)
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         Text(stringResource(R.string.maps_country_title), style = MaterialTheme.typography.titleSmall)
-        MapRow(countryKey, stringResource(R.string.maps_country), progress, ::size) { toConfirm = it }
+        MapRow(countryKey, stringResource(R.string.maps_country), progress, ::size, { toDelete = it }) { toConfirm = it }
 
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         Text(stringResource(R.string.maps_regions_title), style = MaterialTheme.typography.titleSmall)
@@ -110,8 +111,26 @@ fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         regions.filter { it.code != MapCatalog.COUNTRY }.forEach { region ->
-            MapRow(MapCatalog.key(layer, region.code), region.name, progress, ::size) { toConfirm = it }
+            MapRow(MapCatalog.key(layer, region.code), region.name, progress, ::size, { toDelete = it }) { toConfirm = it }
         }
+    }
+
+    toDelete?.let { key ->
+        val bytes = MapFiles.installedSize(key)
+        AlertDialog(
+            onDismissRequest = { toDelete = null },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        toDelete = null
+                        MapFiles.delete(key)
+                    },
+                ) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = { TextButton(onClick = { toDelete = null }) { Text(stringResource(R.string.cancel)) } },
+            title = { Text(stringResource(R.string.area_title, name(key), stringResource(layer.fullName))) },
+            text = { Text(stringResource(R.string.maps_delete_question, size(bytes))) },
+        )
     }
 
     toConfirm?.let { key ->
@@ -171,6 +190,7 @@ private fun MapRow(
     title: String,
     progress: MapFiles.Progress?,
     size: (Long) -> String,
+    onDelete: (String) -> Unit,
     onDownload: (String) -> Unit,
 ) {
     val published = MapFiles.catalog?.get(key)
@@ -203,7 +223,7 @@ private fun MapRow(
             }
         }
         if (installedDate != null) {
-            TextButton(onClick = { MapFiles.delete(key) }, enabled = !running) {
+            TextButton(onClick = { onDelete(key) }, enabled = !running) {
                 Text(stringResource(R.string.delete))
             }
         }

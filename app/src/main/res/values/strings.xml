@@ -103,4 +103,5 @@
     <string name="cache_clear_confirm">Clear</string>
     <string name="cache_cleared">Cache cleared: %1$s freed</string>
     <string name="north_up">Put north up</string>
+    <string name="maps_delete_question">Delete this map (%1$s)? It will no longer show without a connection, until it is downloaded again.</string>
 </resources>

@@ -97,6 +97,9 @@ object MapFiles {
 
     private fun file(key: String) = File(directory, "$key.pmtiles")
 
+    /** Room taken on the phone by the installed file [key]. */
+    fun installedSize(key: String): Long = file(key).length()
+
     /** Files to draw for [layer], the country first, then the regions over it. */
     fun installedFiles(layer: MapLayer): List<File> =
         installed.keys.filter { it.startsWith("${layer.id}-") }

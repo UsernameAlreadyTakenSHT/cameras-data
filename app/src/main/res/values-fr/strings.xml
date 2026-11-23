@@ -103,4 +103,5 @@
     <string name="cache_clear_confirm">Vider</string>
     <string name="cache_cleared">Cache vidé : %1$s libérés</string>
     <string name="north_up">Remettre le nord en haut</string>
+    <string name="maps_delete_question">Supprimer cette carte (%1$s) ? Elle ne s\'affichera plus sans connexion, jusqu\'à un nouveau téléchargement.</string>
 </resources>
