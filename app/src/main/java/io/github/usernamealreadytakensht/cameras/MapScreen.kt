@@ -61,6 +61,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -75,6 +76,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -146,6 +148,9 @@ fun MapScreen() {
     // Where the map was long-pressed: a panel offers to see that place elsewhere.
     var pointAt by remember { mutableStateOf<GeoPoint?>(null) }
     var cacheBytes by remember { mutableStateOf(0L) }
+    var confirmClear by remember { mutableStateOf(false) }
+    // Direction of the top of the screen, in degrees from north: 0 while north is up.
+    var bearing by remember { mutableStateOf(0.0) }
     val scope = rememberCoroutineScope()
     // The point touched on the map, described by a card: a Radar or a Camera.
     var touched by remember { mutableStateOf<Any?>(null) }
@@ -185,7 +190,10 @@ fun MapScreen() {
                 }
             },
         ) { ready ->
-            ready.addOnCameraMoveListener { cameraMoves++ }
+            ready.addOnCameraMoveListener {
+                cameraMoves++
+                bearing = ready.cameraPosition.bearing
+            }
             ready.addOnCameraIdleListener { cameraStops++ }
             map = ready
         }
@@ -211,6 +219,27 @@ fun MapScreen() {
                     .padding(end = 8.dp),
             )
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (abs(bearing) > 0.5) {
+                    FilledTonalIconButton(
+                        onClick = {
+                            map?.animateCamera(CameraUpdateFactory.bearingTo(0.0), 400)
+                        },
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                        modifier = Modifier
+                            .shadow(3.dp, CircleShape)
+                            .size(48.dp),
+                    ) {
+                        // The needle keeps pointing to the real north while the map turns.
+                        Icon(
+                            painterResource(R.drawable.ic_compass),
+                            stringResource(R.string.north_up),
+                            tint = Color.Unspecified,
+                            modifier = Modifier.rotate(-bearing.toFloat()),
+                        )
+                    }
+                }
                 FilledTonalIconButton(
                     onClick = {
                         if (locationAllowed) {
@@ -372,7 +401,7 @@ fun MapScreen() {
                         },
                         onClick = {
                             layersOpen = false
-                            scope.launch(Dispatchers.IO) { httpCache.evictAll() }
+                            confirmClear = true
                         },
                     )
                 }
@@ -418,6 +447,34 @@ fun MapScreen() {
         )
     }
 
+    if (confirmClear) {
+        AlertDialog(
+            onDismissRequest = { confirmClear = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmClear = false
+                        val before = cacheBytes
+                        scope.launch(Dispatchers.IO) {
+                            TileCache.clearAll()
+                            val freed = (before - TileCache.bytes()).coerceAtLeast(0)
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.cache_cleared, Formatter.formatShortFileSize(context, freed)),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        }
+                    },
+                ) { Text(stringResource(R.string.cache_clear_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
+            title = { Text(stringResource(R.string.cache_clear)) },
+            text = { Text(stringResource(R.string.cache_clear_question, Formatter.formatShortFileSize(context, cacheBytes))) },
+        )
+    }
+
     pointAt?.let { point ->
         ModalBottomSheet(onDismissRequest = { pointAt = null }) {
             PointSheet(point, panoramax = panoramaxOn)
@@ -426,7 +483,7 @@ fun MapScreen() {
 
     // The size shown in the menu is read each time it opens.
     LaunchedEffect(layersOpen) {
-        if (layersOpen) cacheBytes = withContext(Dispatchers.IO) { httpCache.size() }
+        if (layersOpen || confirmClear) cacheBytes = withContext(Dispatchers.IO) { TileCache.bytes() }
     }
 }
 
@@ -533,7 +590,7 @@ private fun BaseMap(
                     isLogoEnabled = false
                     isAttributionEnabled = false
                     isCompassEnabled = false
-                    isRotateGesturesEnabled = false
+                    isRotateGesturesEnabled = true
                     isTiltGesturesEnabled = false
                 }
                 // Last position, or the whole of metropolitan France on first launch.

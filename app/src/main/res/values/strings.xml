@@ -66,7 +66,7 @@
     <string name="photos_none">No photo within %1$d m of this point.</string>
     <string name="photos_failed">The photo could not be fetched: %1$s</string>
     <string name="cache_clear">Clear the cache</string>
-    <string name="cache_size">%1$s of photos and online searches</string>
+    <string name="cache_size">%1$s of maps seen, photos and online searches</string>
     <string name="see_elsewhere">See this place in another service (opens outside the app)</string>
     <string name="see_in_panoramax">See in Panoramax</string>
     <string name="see_in_mapillary">See in Mapillary</string>
@@ -99,5 +99,8 @@
     <string name="update">Update</string>
     <string name="tile_cache_title">Cache of the maps seen</string>
     <string name="tile_cache_help">Places already viewed online stay visible offline, up to this size.</string>
-    <string name="tile_cache_clear">Clear</string>
+    <string name="cache_clear_question">Delete the %1$s kept automatically: maps seen online, street photos and online searches? The maps downloaded in Offline are kept.</string>
+    <string name="cache_clear_confirm">Clear</string>
+    <string name="cache_cleared">Cache cleared: %1$s freed</string>
+    <string name="north_up">Put north up</string>
 </resources>

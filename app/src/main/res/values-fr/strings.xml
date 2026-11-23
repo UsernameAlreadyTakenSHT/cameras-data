@@ -66,7 +66,7 @@
     <string name="photos_none">Aucune photo à moins de %1$d m de ce point.</string>
     <string name="photos_failed">La photo n\'a pas pu être récupérée : %1$s</string>
     <string name="cache_clear">Vider le cache</string>
-    <string name="cache_size">%1$s de photos et de recherches en ligne</string>
+    <string name="cache_size">%1$s de cartes parcourues, photos et recherches en ligne</string>
     <string name="see_elsewhere">Voir cet endroit dans un autre service (s\'ouvre hors de l\'appli)</string>
     <string name="see_in_panoramax">Voir dans Panoramax</string>
     <string name="see_in_mapillary">Voir dans Mapillary</string>
@@ -99,5 +99,8 @@
     <string name="update">Mettre à jour</string>
     <string name="tile_cache_title">Cache des cartes parcourues</string>
     <string name="tile_cache_help">Les endroits déjà vus en ligne restent visibles hors connexion, jusqu\'à cette taille.</string>
-    <string name="tile_cache_clear">Vider</string>
+    <string name="cache_clear_question">Supprimer les %1$s gardés automatiquement : cartes parcourues en ligne, photos de rue et recherches en ligne ? Les cartes téléchargées dans Hors-ligne sont conservées.</string>
+    <string name="cache_clear_confirm">Vider</string>
+    <string name="cache_cleared">Cache vidé : %1$s libérés</string>
+    <string name="north_up">Remettre le nord en haut</string>
 </resources>

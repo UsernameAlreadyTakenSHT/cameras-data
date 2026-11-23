@@ -161,7 +161,6 @@ private fun TileCacheRow(size: (Long) -> String) {
                 }
             }
         }
-        TextButton(onClick = { TileCache.clear() }) { Text(stringResource(R.string.tile_cache_clear)) }
     }
 }
 
