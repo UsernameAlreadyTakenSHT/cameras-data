@@ -33,7 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view data >/dev/null 2>&1 || gh release create data --title "Data" \
+          gh release view data >/dev/null 2>&1 || gh release create data --prerelease --latest=false --title "Data" \
             --notes "Data files downloaded by the Cameras app. Rebuilt on the 1st of each month."
           # data.json goes last: the app must never see new dates before the files they describe.
           gh release upload data dist/radars.csv dist/cameras.tsv dist/addresses.db.gz --clobber

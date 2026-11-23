@@ -21,7 +21,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view maps >/dev/null 2>&1 || gh release create maps --title "Maps" \
+          gh release view maps >/dev/null 2>&1 || gh release create maps --prerelease --latest=false --title "Maps" \
             --notes "Offline maps of the Cameras app (IGN tiles, Licence Ouverte 2.0). Rebuilt every month."
 
   build:
