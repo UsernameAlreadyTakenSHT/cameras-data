@@ -12,7 +12,20 @@ permissions:
   contents: write
 
 jobs:
+  # The release first, once: when the parallel builds created it, one of them could upload
+  # before it existed.
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view maps >/dev/null 2>&1 || gh release create maps --title "Maps" \
+            --notes "Offline maps of the Cameras app (IGN tiles, Licence Ouverte 2.0). Rebuilt every month."
+
   build:
+    needs: release
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
@@ -37,8 +50,6 @@ jobs:
           KEY: ${{ matrix.layer }}-${{ matrix.area }}
         run: |
           DATE=$(date -u +%Y-%m-%d)
-          gh release view maps >/dev/null 2>&1 || gh release create maps --title "Maps" \
-            --notes "Offline maps of the Cameras app (IGN tiles, Licence Ouverte 2.0). Rebuilt every month." || true
           # GitHub takes files up to 2 GB: larger ones go in parts, joined again by the app.
           mkdir out
           split -b 1900M -d -a 3 map.pmtiles "out/$KEY-$DATE.pmtiles."
