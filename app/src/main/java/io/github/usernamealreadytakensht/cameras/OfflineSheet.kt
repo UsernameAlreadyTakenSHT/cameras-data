@@ -2,6 +2,7 @@ package io.github.usernamealreadytakensht.cameras
 
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +90,8 @@ fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
             )
         }
 
+        TileCacheRow(::size)
+
         if (catalog == null) {
             if (MapFiles.error == null) LinearProgressIndicator(Modifier.fillMaxWidth())
             return@Column
@@ -125,6 +130,38 @@ fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
             title = { Text(stringResource(R.string.area_title, name(key), stringResource(layer.fullName))) },
             text = { Text(stringResource(R.string.maps_confirm, size(file.size))) },
         )
+    }
+}
+
+/** Size of the cache of the map tiles seen online, chosen among [TileCache.choices]. */
+@Composable
+private fun TileCacheRow(size: (Long) -> String) {
+    var open by remember { mutableStateOf(false) }
+    HorizontalDivider(Modifier.padding(vertical = 4.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.tile_cache_title), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(R.string.tile_cache_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Box {
+            TextButton(onClick = { open = true }) { Text(size(TileCache.limit) + " ▾") }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                TileCache.choices.forEach { bytes ->
+                    DropdownMenuItem(
+                        text = { Text(size(bytes)) },
+                        onClick = {
+                            open = false
+                            TileCache.choose(bytes)
+                        },
+                    )
+                }
+            }
+        }
+        TextButton(onClick = { TileCache.clear() }) { Text(stringResource(R.string.tile_cache_clear)) }
     }
 }
 

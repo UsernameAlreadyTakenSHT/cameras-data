@@ -57,21 +57,53 @@ object TileHealth {
         }
     }
 
-    /** Interceptor of the tile client: a tile received clears the message, a failure explains it. */
+    /** Failures in a row, and when the first of them happened (0 while tiles load). */
+    private val failures = FailureRun()
+
+    /**
+     * Interceptor of the tile client: a tile received clears the message; failures explain it,
+     * but only once they last. Zooming or panning cancels the tiles no longer needed, and a
+     * slow tile is not a dead server.
+     */
     val interceptor = Interceptor { chain ->
         val request = chain.request()
         if (request.url.host != TILE_HOST) return@Interceptor chain.proceed(request)
         val response: Response = try {
             chain.proceed(request)
         } catch (e: IOException) {
-            if (problem != TileProblem.BLOCKED && isOnline()) report(TileProblem.UNREACHABLE)
+            // Cancelled by the map itself: the tile is simply no longer on screen.
+            if (!chain.call().isCanceled() && problem != TileProblem.BLOCKED && isOnline()) {
+                if (failures.add(System.currentTimeMillis())) report(TileProblem.UNREACHABLE)
+            }
             throw e
         }
         if (response.isSuccessful) {
+            failures.reset()
             if (problem != null) problem = null
             dismissed = false
         }
         response
+    }
+
+    /**
+     * Failed tile requests in a row with no tile received in between. [add] answers true once
+     * they are many and old enough to say the server does not answer.
+     */
+    class FailureRun(private val minCount: Int = 5, private val minMillis: Long = 4000) {
+        private var count = 0
+        private var since = 0L
+
+        @Synchronized
+        fun add(now: Long): Boolean {
+            if (count == 0) since = now
+            count++
+            return count >= minCount && now - since >= minMillis
+        }
+
+        @Synchronized
+        fun reset() {
+            count = 0
+        }
     }
 
     private fun report(found: TileProblem) {

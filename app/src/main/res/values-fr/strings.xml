@@ -97,4 +97,7 @@
     <string name="maps_progress">%1$s sur %2$s</string>
     <string name="maps_confirm">%1$s à télécharger depuis GitHub. Wi-Fi conseillé. Le téléchargement s\'arrête si l\'appli est fermée, et reprend là où il s\'est arrêté la fois suivante.</string>
     <string name="update">Mettre à jour</string>
+    <string name="tile_cache_title">Cache des cartes parcourues</string>
+    <string name="tile_cache_help">Les endroits déjà vus en ligne restent visibles hors connexion, jusqu\'à cette taille.</string>
+    <string name="tile_cache_clear">Vider</string>
 </resources>

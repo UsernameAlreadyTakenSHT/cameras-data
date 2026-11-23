@@ -40,6 +40,7 @@ class CamerasApp : Application() {
             .build()
         TileHealth.init(this)
         MapFiles.init(this)
+        TileCache.init(this)
         HttpRequestUtil.setOkHttpClient(
             OkHttpClient.Builder()
                 .addInterceptor(LocalStyleInterceptor(assets))

@@ -97,4 +97,7 @@
     <string name="maps_progress">%1$s of %2$s</string>
     <string name="maps_confirm">%1$s to download from GitHub. Wi-Fi recommended. The download stops if the app is closed, and goes on from there next time.</string>
     <string name="update">Update</string>
+    <string name="tile_cache_title">Cache of the maps seen</string>
+    <string name="tile_cache_help">Places already viewed online stay visible offline, up to this size.</string>
+    <string name="tile_cache_clear">Clear</string>
 </resources>
