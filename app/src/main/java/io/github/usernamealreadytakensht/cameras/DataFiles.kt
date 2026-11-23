@@ -4,10 +4,12 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.StatFs
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.util.zip.GZIPInputStream
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,6 +68,9 @@ class DataFiles(context: Context) {
 
     private fun bundledVersion(kind: DataKind) = DataVersion.of(bundled, kind) ?: DataVersion("", 0)
 
+    /** Records that [file] now holds the bundled copy of [kind]. */
+    fun installedBundled(kind: DataKind) = installed(kind, bundledVersion(kind))
+
     /** Version of the downloaded copy, when there is one and the bundled copy is not newer. */
     private fun downloaded(kind: DataKind): DataVersion? =
         DataVersion.parse(prefs.getString(kind.key, null))
@@ -112,12 +117,11 @@ class DataUpdater(
 ) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var started = false
 
     /** Does nothing when the last complete update is less than a month old. */
     fun runIfDue() {
-        if (started || System.currentTimeMillis() - files.lastUpdateCheck < EVERY_MS) return
-        started = true
+        if (System.currentTimeMillis() - files.lastUpdateCheck < EVERY_MS) return
+        if (!started.compareAndSet(false, true)) return
         scope.launch {
             try {
                 if (update()) files.lastUpdateCheck = System.currentTimeMillis()
@@ -131,35 +135,43 @@ class DataUpdater(
     private suspend fun update(): Boolean {
         val remote = JSONObject(String(get("$BASE_URL/data.json").use { it.readBytes() }, Charsets.UTF_8))
         val unmetered = isUnmetered()
-
-        newer(remote, DataKind.RADARS)?.let { version ->
-            val temporary = download(DataKind.RADARS, gzip = false)
-            val count = RadarCsv.parse(RadarCsv.decode(temporary.readBytes())).size
-            // A sound list holds thousands of entries: anything tiny is not the right file.
-            if (count < MIN_RADARS) throw IOException("unexpected radars file")
-            replace(DataKind.RADARS, temporary, version)
-            radars.reload()
-        }
-        newer(remote, DataKind.CAMERAS)?.let { version ->
-            val temporary = download(DataKind.CAMERAS, gzip = false)
-            val count = temporary.useLines { lines -> lines.count { CameraData.decode(it) != null } }
-            if (count < MIN_CAMERAS) throw IOException("unexpected cameras file")
-            replace(DataKind.CAMERAS, temporary, version)
-            cameras.reload()
-        }
-
         var complete = true
+
+        complete = attempt(DataKind.RADARS) {
+            newer(remote, DataKind.RADARS)?.let { version ->
+                val temporary = download(DataKind.RADARS, gzip = false)
+                val count = RadarCsv.parse(RadarCsv.decode(temporary.readBytes())).size
+                // A sound list holds thousands of entries: anything tiny is not the right file.
+                if (count < MIN_RADARS) throw IOException("unexpected radars file")
+                replace(DataKind.RADARS, temporary, version)
+                radars.reload()
+            }
+        } && complete
+        complete = attempt(DataKind.CAMERAS) {
+            newer(remote, DataKind.CAMERAS)?.let { version ->
+                val temporary = download(DataKind.CAMERAS, gzip = false)
+                val count = temporary.useLines { lines -> lines.count { CameraData.decode(it) != null } }
+                if (count < MIN_CAMERAS) throw IOException("unexpected cameras file")
+                replace(DataKind.CAMERAS, temporary, version)
+                cameras.reload()
+            }
+        } && complete
+
         val newAddresses = newer(remote, DataKind.ADDRESSES)
         if (newAddresses != null) {
             if (unmetered) {
-                // The first launch may still be installing the bundled database.
-                repeat(60) { if (!addresses.ready) delay(2000) }
-                val temporary = download(DataKind.ADDRESSES, gzip = true)
-                val places = SQLiteDatabase.openDatabase(temporary.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-                    db.rawQuery("SELECT count(*) FROM place", null).use { if (it.moveToFirst()) it.getLong(0) else 0 }
-                }
-                if (places < MIN_PLACES) throw IOException("unexpected address database")
-                addresses.replaceWith(temporary, newAddresses)
+                complete = attempt(DataKind.ADDRESSES) {
+                    // The first launch installs the bundled database: the new one must not race it.
+                    addresses.awaitInstalled()
+                    val free = StatFs(appContext.filesDir.path).availableBytes
+                    if (free < ADDRESS_ROOM) throw IOException("not enough free space")
+                    val temporary = download(DataKind.ADDRESSES, gzip = true)
+                    val places = SQLiteDatabase.openDatabase(temporary.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                        db.rawQuery("SELECT count(*) FROM place", null).use { if (it.moveToFirst()) it.getLong(0) else 0 }
+                    }
+                    if (places < MIN_PLACES) throw IOException("unexpected address database")
+                    addresses.replaceWith(temporary, newAddresses)
+                } && complete
             } else {
                 complete = false
             }
@@ -171,6 +183,22 @@ class DataUpdater(
             complete = false
         }
         return complete
+    }
+
+    /**
+     * Runs the update of one data set. A failure leaves the set in use as it was, removes the
+     * file half downloaded, and does not stop the other sets.
+     *
+     * @return false when it failed: the update is tried again on the next launch.
+     */
+    private suspend fun attempt(kind: DataKind, work: suspend () -> Unit): Boolean = try {
+        work()
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        File(appContext.filesDir, "${kind.file}.new").delete()
+        false
     }
 
     /** The published version of [kind], when it differs from the one in use and is not older. */
@@ -201,9 +229,7 @@ class DataUpdater(
     }
 
     private fun replace(kind: DataKind, temporary: File, version: DataVersion) {
-        val target = files.file(kind)
-        target.delete()
-        if (!temporary.renameTo(target)) throw IOException("cannot install ${kind.file}")
+        if (!temporary.renameTo(files.file(kind))) throw IOException("cannot install ${kind.file}")
         files.installed(kind, version)
     }
 
@@ -220,5 +246,11 @@ class DataUpdater(
         const val MIN_RADARS = 100
         const val MIN_CAMERAS = 1000
         const val MIN_PLACES = 100_000L
+
+        /** Free space needed to download and unpack the address database. */
+        const val ADDRESS_ROOM = 800_000_000L
+
+        /** One update at a time in the process. */
+        val started = java.util.concurrent.atomic.AtomicBoolean(false)
     }
 }

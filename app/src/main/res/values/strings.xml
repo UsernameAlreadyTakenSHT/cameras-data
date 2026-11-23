@@ -88,8 +88,9 @@
     <string name="maps_not_published">The offline maps are not published yet: try again in a few days.</string>
     <string name="maps_country_title">Whole country</string>
     <string name="maps_country">France — districts (zoom 13)</string>
-    <string name="maps_regions_title">Regions — streets (zoom 14)</string>
-    <string name="maps_regions_help">Adds the streets to the whole country map: download it as well.</string>
+    <string name="maps_no_connection">No connection: the maps already downloaded are listed below. The others show once online.</string>
+    <string name="maps_regions_title">Regions — down to the streets (zoom 14)</string>
+    <string name="maps_regions_help">Each region shows on its own, at every scale.</string>
     <string name="maps_size">%1$s</string>
     <string name="maps_installed">Downloaded · map of %1$s</string>
     <string name="maps_update_available">Downloaded · newer map available (%1$s)</string>

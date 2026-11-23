@@ -4,8 +4,8 @@ Usage: python tools/build_maps.py plan|photos AREA OUT.pmtiles
 Needs the shapely and pmtiles packages.
 
 AREA is "FR", the whole country (metropolitan France and the overseas regions) from zoom 0 to
-13, or a region code of app/src/main/assets/regions.geojson ("53"), at zoom 14 only: a region
-file adds the streets to the country file. The tiles come from the IGN Géoplateforme (WMTS,
+13, or a region code of app/src/main/assets/regions.geojson ("53"), from zoom 0 to 14: a region
+file shows on its own at every scale, down to the streets. The tiles come from the IGN Géoplateforme (WMTS,
 Licence Ouverte 2.0): the app downloads these files instead of every phone asking IGN for tiles.
 """
 import concurrent.futures
@@ -31,6 +31,8 @@ USER_AGENT = "Cameras-map-build (Android app io.github.usernamealreadytakensht.c
 WORKERS = 8
 COUNTRY_MAX_ZOOM = 13
 REGION_ZOOM = 14
+# Share of the tiles that must exist: the areas cover land, where IGN has tiles nearly everywhere.
+MIN_SHARE = 0.5
 
 
 def tx(lon, z):
@@ -74,6 +76,9 @@ def fetch(layer, fmt, z, x, y):
         try:
             request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(request, timeout=60) as response:
+                # An error page sent with status 200 is not a tile.
+                if not response.headers.get("Content-Type", "").startswith("image/"):
+                    raise SystemExit(f"{z}/{x}/{y}: not an image ({response.headers.get('Content-Type')})")
                 return response.read()
         except urllib.error.HTTPError as error:
             if error.code in (400, 404):
@@ -87,7 +92,7 @@ def fetch(layer, fmt, z, x, y):
 
 def main():
     name, area, out = sys.argv[1], sys.argv[2], sys.argv[3]
-    min_zoom, max_zoom = (0, COUNTRY_MAX_ZOOM) if area == "FR" else (REGION_ZOOM, REGION_ZOOM)
+    min_zoom, max_zoom = 0, COUNTRY_MAX_ZOOM if area == "FR" else REGION_ZOOM
     layer, fmt, tile_type, title = LAYERS[name]
 
     features = json.load(open(REGIONS, encoding="utf-8"))["features"]
@@ -116,6 +121,10 @@ def main():
                         size += len(data)
                 print(f"  {start + len(chunk)}/{len(tiles)} tiles, {size / 1e6:.0f} MB, "
                       f"{time.time() - started:.0f}s", flush=True)
+        # Almost nothing received means the service changed (a renamed layer answers 400 to
+        # everything): failing keeps last month's file instead of publishing a blank map.
+        if written < len(tiles) * MIN_SHARE:
+            raise SystemExit(f"only {written} of {len(tiles)} tiles received")
         w, s, e, n = geom.bounds
         writer.finalize(
             {

@@ -85,7 +85,9 @@ fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
 
         MapFiles.error?.let { message ->
             Text(
-                stringResource(R.string.error_download, message),
+                // Without the list, the cause is nearly always the lack of a connection.
+                if (catalog == null) stringResource(R.string.maps_no_connection)
+                else stringResource(R.string.error_download, message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -93,24 +95,29 @@ fun OfflineSheet(regions: List<Region>, layer: MapLayer) {
 
         TileCacheRow(::size)
 
-        if (catalog == null) {
-            if (MapFiles.error == null) LinearProgressIndicator(Modifier.fillMaxWidth())
-            return@Column
-        }
+        // Without the list of published maps (no network yet), the maps already downloaded are
+        // still listed, so that they can be deleted.
+        if (catalog == null && MapFiles.error == null) LinearProgressIndicator(Modifier.fillMaxWidth())
+        fun shown(key: String) = catalog != null || key in MapFiles.installed
 
         val countryKey = MapCatalog.key(layer, MapCatalog.COUNTRY)
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        Text(stringResource(R.string.maps_country_title), style = MaterialTheme.typography.titleSmall)
-        MapRow(countryKey, stringResource(R.string.maps_country), progress, ::size, { toDelete = it }) { toConfirm = it }
+        if (shown(countryKey)) {
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            Text(stringResource(R.string.maps_country_title), style = MaterialTheme.typography.titleSmall)
+            MapRow(countryKey, stringResource(R.string.maps_country), progress, ::size, { toDelete = it }) { toConfirm = it }
+        }
 
-        HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        Text(stringResource(R.string.maps_regions_title), style = MaterialTheme.typography.titleSmall)
-        Text(
-            stringResource(R.string.maps_regions_help),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        regions.filter { it.code != MapCatalog.COUNTRY }.forEach { region ->
+        val regionRows = regions.filter { it.code != MapCatalog.COUNTRY && shown(MapCatalog.key(layer, it.code)) }
+        if (regionRows.isNotEmpty()) {
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            Text(stringResource(R.string.maps_regions_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                stringResource(R.string.maps_regions_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        regionRows.forEach { region ->
             MapRow(MapCatalog.key(layer, region.code), region.name, progress, ::size, { toDelete = it }) { toConfirm = it }
         }
     }

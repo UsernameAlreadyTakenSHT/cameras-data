@@ -139,7 +139,8 @@ fun SearchBar(
                     }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { state.results.firstOrNull()?.let(::pick) }),
+                // While a search runs, the results on screen belong to the previous text.
+                keyboardActions = KeyboardActions(onSearch = { if (!state.loading) state.results.firstOrNull()?.let(::pick) }),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,

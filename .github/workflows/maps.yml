@@ -1,7 +1,7 @@
 name: Monthly maps
 
 # Builds the offline maps of the Cameras app from the IGN tiles: per base map, one file for the
-# whole country (zoom 0-13) and one per region (zoom 14), published as assets of the "maps"
+# whole country (zoom 0-13) and one per region (zoom 0-14), published as assets of the "maps"
 # release with maps.json, their list. The app downloads them on demand and renews them monthly.
 on:
   schedule:
@@ -11,11 +11,19 @@ on:
 permissions:
   contents: write
 
+# One run at a time: the list job of one run would delete files another run just uploaded.
+concurrency:
+  group: maps
+  cancel-in-progress: false
+
 jobs:
   # The release first, once: when the parallel builds created it, one of them could upload
   # before it existed.
   release:
     runs-on: ubuntu-latest
+    outputs:
+      # One date for the whole run, even when its builds go past midnight.
+      date: ${{ steps.date.outputs.date }}
     steps:
       - env:
           GH_TOKEN: ${{ github.token }}
@@ -23,6 +31,8 @@ jobs:
         run: |
           gh release view maps >/dev/null 2>&1 || gh release create maps --prerelease --latest=false --title "Maps" \
             --notes "Offline maps of the Cameras app (IGN tiles, Licence Ouverte 2.0). Rebuilt every month."
+      - id: date
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
   build:
     needs: release
@@ -48,8 +58,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           KEY: ${{ matrix.layer }}-${{ matrix.area }}
+          DATE: ${{ needs.release.outputs.date }}
         run: |
-          DATE=$(date -u +%Y-%m-%d)
           # GitHub takes files up to 2 GB: larger ones go in parts, joined again by the app.
           mkdir out
           split -b 1900M -d -a 3 map.pmtiles "out/$KEY-$DATE.pmtiles."
@@ -80,7 +90,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release download maps -p maps.json -O old.json 2>/dev/null || echo '{"files": {}}' > old.json
+          # The list of last month must be read: without it, the areas that failed this month
+          # would lose their file. Only a release that never had one starts empty.
+          if gh release view maps --json assets -q '.assets[].name' | grep -qxF maps.json; then
+            gh release download maps -p maps.json -O old.json
+          else
+            echo '{"files": {}}' > old.json
+          fi
           python - <<'EOF'
           import glob, json
           files = json.load(open("old.json")).get("files", {})

@@ -114,7 +114,10 @@ object MapFiles {
             try {
                 val text = get("$RELEASE/maps.json", 0).use { it.body!!.string() }
                 val read = MapCatalog.parse(text)
-                withContext(Dispatchers.Main) { catalog = read }
+                withContext(Dispatchers.Main) {
+                    catalog = read
+                    error = null
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { error = e.message ?: e.javaClass.simpleName }
             }
@@ -134,9 +137,11 @@ object MapFiles {
             val partial = File(directory, "$key.download")
             val marker = File(directory, "$key.download.date")
             try {
-                if (!marker.isFile || marker.readText() != published.date) {
+                // The bytes received are only reused for the very same file: same date, same parts.
+                val identity = published.date + "|" + published.parts.joinToString(",") { "${it.name}:${it.size}" }
+                if (!marker.isFile || marker.readText() != identity || partial.length() > published.size) {
                     partial.delete()
-                    marker.writeText(published.date)
+                    marker.writeText(identity)
                 }
                 val free = StatFs(directory.path).availableBytes
                 if (published.size - partial.length() > free) {
@@ -173,11 +178,19 @@ object MapFiles {
                             }
                         }
                     }
-                    if (partial.length() != end) throw IOException("incomplete part ${part.name}")
+                    if (partial.length() != end) {
+                        // Not what was announced: start this file over next time.
+                        partial.delete()
+                        marker.delete()
+                        throw IOException("incomplete part ${part.name}")
+                    }
                     start = end
                 }
-                install(key, partial, published.date)
-                marker.delete()
+                // Once received whole, the file is installed even if Stop is pressed now.
+                withContext(NonCancellable) {
+                    install(key, partial, published.date)
+                    marker.delete()
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -189,9 +202,8 @@ object MapFiles {
     }
 
     private suspend fun install(key: String, downloaded: File, date: String) {
-        val target = file(key)
-        target.delete()
-        if (!downloaded.renameTo(target)) throw IOException("cannot install the map")
+        // Renamed over the file in use: if the rename fails, that file is still there.
+        if (!downloaded.renameTo(file(key))) throw IOException("cannot install the map")
         appContext.getSharedPreferences("maps", Context.MODE_PRIVATE).edit().putString(key, date).apply()
         withContext(Dispatchers.Main) {
             installed = installed + (key to date)

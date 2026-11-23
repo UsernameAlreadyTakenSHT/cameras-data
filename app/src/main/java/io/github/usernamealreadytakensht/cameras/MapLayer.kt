@@ -3,9 +3,6 @@ package io.github.usernamealreadytakensht.cameras
 import androidx.annotation.StringRes
 import java.io.File
 
-/** Host of the generated map styles: never resolved, see [LocalStyleInterceptor]. */
-const val STYLE_HOST = "style.cameras.invalid"
-
 /**
  * The base maps: raster tiles served without a key by the IGN Géoplateforme (WMTS, Web Mercator
  * pyramid), both under the open licence (Licence Ouverte 2.0).
@@ -37,16 +34,6 @@ enum class MapLayer(
         maxTileZoom = 19,
     );
 
-    /**
-     * Address of this layer's style on the map. [version] changes whenever a map file of the
-     * layer is downloaded or deleted, so that the map loads the style again.
-     */
-    fun styleUrl(version: Int = 0): String = "https://$STYLE_HOST/$id.json?v=$version"
-
-    /** Address of the style the region downloads use: the online tiles alone. */
-    val downloadStyleUrl: String
-        get() = "https://$STYLE_HOST/$id-online.json"
-
     private val tileUrl: String
         get() = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=$wmtsLayer" +
             "&STYLE=normal&FORMAT=$format&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}"
@@ -69,7 +56,7 @@ enum class MapLayer(
         {
           "version": 8,
           "name": "$id",
-          "glyphs": "https://$STYLE_HOST/fonts/{fontstack}/{range}.pbf",
+          "glyphs": "asset://fonts/{fontstack}/{range}.pbf",
           "sources": {$localSources
             "base": {
               "type": "raster",

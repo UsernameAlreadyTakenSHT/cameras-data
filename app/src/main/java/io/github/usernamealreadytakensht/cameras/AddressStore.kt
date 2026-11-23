@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -29,6 +30,12 @@ class AddressStore(context: Context, private val files: DataFiles) {
     @Volatile
     private var database: SQLiteDatabase? = null
 
+    /** Completed once the database is installed and open, or could not be. */
+    private val installedSignal = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+    /** Install and replacement of the database file, never at the same time. */
+    private val fileLock = kotlinx.coroutines.sync.Mutex()
+
     /** False while the database is being copied, on the first launch after an install or update. */
     var ready by mutableStateOf(false)
         private set
@@ -36,12 +43,14 @@ class AddressStore(context: Context, private val files: DataFiles) {
     init {
         scope.launch {
             val opened = try {
-                install()
+                fileLock.withLock { install() }
             } catch (_: Exception) {
                 null
             }
-            database = opened
-            withContext(Dispatchers.Main) { ready = opened != null }
+            // A replacement may have come first: it then holds the database to use.
+            synchronized(this@AddressStore) { if (database == null) database = opened else opened?.close() }
+            installedSignal.complete(Unit)
+            withContext(Dispatchers.Main) { ready = database != null }
         }
     }
 
@@ -54,25 +63,30 @@ class AddressStore(context: Context, private val files: DataFiles) {
             files.openBundled(DataKind.ADDRESSES).use { input ->
                 temporary.outputStream().use { output -> input.copyTo(output, 1 shl 16) }
             }
-            file.delete()
             if (!temporary.renameTo(file)) throw IOException("cannot install the addresses")
-            files.installed(DataKind.ADDRESSES, files.version(DataKind.ADDRESSES))
+            files.installedBundled(DataKind.ADDRESSES)
         }
         return open(file)
     }
 
     private fun open(file: File) = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY)
 
+    /** Waits until the first install is over, done or failed. */
+    suspend fun awaitInstalled() = installedSignal.await()
+
     /** Puts the downloaded database [newer] in place of the one in use. */
-    @Synchronized
-    fun replaceWith(newer: File, version: DataVersion) {
+    suspend fun replaceWith(newer: File, version: DataVersion) = fileLock.withLock {
         val file = files.file(DataKind.ADDRESSES)
-        database?.close()
-        database = null
-        file.delete()
-        if (!newer.renameTo(file)) throw IOException("cannot install the addresses")
-        files.installed(DataKind.ADDRESSES, version)
-        database = open(file)
+        synchronized(this) {
+            database?.close()
+            database = null
+            // Renamed over the file in use: if the rename fails, that file is still there.
+            val moved = newer.renameTo(file)
+            if (moved) files.installed(DataKind.ADDRESSES, version)
+            database = open(file)
+            if (!moved) throw IOException("cannot install the addresses")
+        }
+        withContext(Dispatchers.Main) { ready = true }
     }
 
     /** Towns come first, then the streets where the number asked exists, then the shortest names. */

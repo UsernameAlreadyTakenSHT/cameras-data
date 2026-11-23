@@ -31,6 +31,8 @@ object CoordinateParser {
         val first = Part(g[1].ifEmpty { g[5] }, g[2], g[3], g[4])
         val second = Part(g[6].ifEmpty { g[10] }, g[7], g[8], g[9])
         if (!first.explicit && !second.explicit) return null
+        // "48N 2N" or "48E 2E": both on the same axis, not a position.
+        if (first.axis != null && first.axis == second.axis) return null
         val a = first.value() ?: return null
         val b = second.value() ?: return null
         val latitudeFirst = when {
@@ -46,12 +48,24 @@ object CoordinateParser {
     private class Part(hemisphere: String, val degrees: String, val minutes: String, val seconds: String) {
         val hemisphere = hemisphere.uppercase()
 
+        /** 'NS' or 'EW' when a hemisphere letter is given. */
+        val axis: Char?
+            get() = when {
+                hemisphere.isEmpty() -> null
+                hemisphere in "NS" -> 'N'
+                else -> 'E'
+            }
+
         /** True when the text cannot be a mere integer, such as a house number. */
         val explicit: Boolean
             get() = hemisphere.isNotEmpty() || minutes.isNotEmpty() || '.' in degrees || ',' in degrees
 
         fun value(): Double? {
             val d = number(degrees)
+            // Fractional degrees followed by minutes ("48.5°30'") mean nothing.
+            if (minutes.isNotEmpty() && d != kotlin.math.floor(d)) return null
+            // Likewise for fractional minutes followed by seconds.
+            if (seconds.isNotEmpty() && number(minutes).let { it != kotlin.math.floor(it) }) return null
             val m = if (minutes.isEmpty()) 0.0 else number(minutes)
             val s = if (seconds.isEmpty()) 0.0 else number(seconds)
             if (m >= 60 || s >= 60) return null

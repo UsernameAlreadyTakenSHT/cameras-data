@@ -88,8 +88,9 @@
     <string name="maps_not_published">Les cartes hors-ligne ne sont pas encore publiées : réessayez dans quelques jours.</string>
     <string name="maps_country_title">Pays entier</string>
     <string name="maps_country">France — quartiers (zoom 13)</string>
-    <string name="maps_regions_title">Régions — rues (zoom 14)</string>
-    <string name="maps_regions_help">Ajoute les rues à la carte du pays entier : téléchargez-la aussi.</string>
+    <string name="maps_no_connection">Pas de connexion : les cartes déjà téléchargées sont listées ci-dessous. Les autres apparaîtront une fois en ligne.</string>
+    <string name="maps_regions_title">Régions — jusqu’aux rues (zoom 14)</string>
+    <string name="maps_regions_help">Chaque région s’affiche seule, à toutes les échelles.</string>
     <string name="maps_size">%1$s</string>
     <string name="maps_installed">Téléchargée · carte du %1$s</string>
     <string name="maps_update_available">Téléchargée · carte plus récente disponible (%1$s)</string>

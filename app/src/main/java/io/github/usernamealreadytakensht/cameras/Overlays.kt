@@ -20,8 +20,8 @@ import org.maplibre.geojson.Point
 
 /** What a touch on the map hit, among the points drawn over the base map. */
 sealed interface Touched {
-    data class OfRadar(val index: Int) : Touched
-    data class OfCamera(val index: Int) : Touched
+    data class OfRadar(val radar: Radar) : Touched
+    data class OfCamera(val camera: Camera) : Touched
 }
 
 /** The points drawn over the base map: fixed speed cameras and surveillance cameras. */
@@ -32,9 +32,9 @@ object Overlays {
     private const val CAMERA_COUNTS = "camera-counts"
 
     /** Font of the cluster numbers, bundled in the app (assets/fonts): digits work offline too. */
-    const val FONT = "Open Sans Semibold"
+    const val FONT = "OpenSansSemibold"
 
-    /** Property of each point: position of its object in the list shown. */
+    /** Property of each point: position of its object in the list drawn ([drawnRadars], [drawnCameras]). */
     private const val INDEX = "index"
     private const val KIND = "kind"
 
@@ -46,8 +46,20 @@ object Overlays {
 
     private const val WHITE = "#FFFFFF"
 
+    /**
+     * The lists the points on the map were made from. A touch is looked up in them, not in the
+     * lists of the moment: those may already hold newer data the map has not drawn yet.
+     */
+    @Volatile
+    private var drawnRadars: List<Radar> = emptyList()
+
+    @Volatile
+    private var drawnCameras: List<Camera> = emptyList()
+
     /** Draws [radars] as orange dots, replacing those already there. */
     fun showRadars(style: Style, radars: List<Radar>) {
+        // A style being replaced must not be touched: MapLibre throws.
+        if (!style.isFullyLoaded) return
         style.removeLayer(RADARS)
         style.removeSource(RADARS)
         if (radars.isEmpty()) return
@@ -55,6 +67,7 @@ object Overlays {
             Feature.fromGeometry(Point.fromLngLat(radar.lon, radar.lat)).apply { addNumberProperty(INDEX, index) }
         }
         style.addSource(GeoJsonSource(RADARS, FeatureCollection.fromFeatures(features)))
+        drawnRadars = radars
         style.addLayer(
             CircleLayer(RADARS, RADARS).withProperties(
                 PropertyFactory.circleColor("#F08C00"),
@@ -76,6 +89,7 @@ object Overlays {
      * street level they are gathered into dark clusters, larger where there are more.
      */
     suspend fun showCameras(style: Style, cameras: List<Camera>) {
+        if (!style.isFullyLoaded) return
         if (cameras.isEmpty()) {
             style.removeLayer(CAMERAS)
             style.removeLayer(CAMERA_COUNTS)
@@ -93,6 +107,9 @@ object Overlays {
                 },
             )
         }
+        // The base map may have been switched meanwhile: that style is gone, the new one gets its own call.
+        if (!style.isFullyLoaded) return
+        drawnCameras = cameras
         // Already drawn: only the points change (an area was brought up to date), the layers stay.
         val existing = style.getSourceAs<GeoJsonSource>(CAMERAS)
         if (existing != null) {
@@ -202,8 +219,8 @@ object Overlays {
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, map.cameraPosition.zoom + 2), 500)
                 null
             }
-            hit.hasProperty(KIND) -> Touched.OfCamera(hit.getNumberProperty(INDEX).toInt())
-            else -> Touched.OfRadar(hit.getNumberProperty(INDEX).toInt())
+            hit.hasProperty(KIND) -> drawnCameras.getOrNull(hit.getNumberProperty(INDEX).toInt())?.let { Touched.OfCamera(it) }
+            else -> drawnRadars.getOrNull(hit.getNumberProperty(INDEX).toInt())?.let { Touched.OfRadar(it) }
         }
     }
 }

@@ -202,6 +202,9 @@ def build_radars():
     os.makedirs(ASSETS, exist_ok=True)
     with open(os.path.join(ASSETS, "radars.csv"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
+    # The app refuses a list this small: better to fail here than to publish it.
+    if len(lines) - 1 < 100:
+        raise SystemExit(f"only {len(lines) - 1} radars: the source file changed")
     note("radars", {"date": newest["last_modified"][:10], "count": len(lines) - 1})
     print(f"radars.csv: {len(lines) - 1} cameras, file of {newest['last_modified'][:10]}")
 
@@ -226,7 +229,9 @@ def overpass(query):
         for server in OVERPASS:
             try:
                 data = json.loads(fetch(server, body, timeout=400))
-                if data.get("remark") and not data.get("elements"):
+                # A remark means the server stopped early (timeout, memory): the answer may lack
+                # part of the region, so it is never kept.
+                if data.get("remark"):
                     raise IOError(data["remark"])
                 return data
             except Exception as error:  # busy server, timeout, truncated answer: try the next one
@@ -262,6 +267,8 @@ def build_cameras():
                 tags.get("camera:direction") or tags.get("direction", ""), tags.get("operator", ""),
             )
         print(f"{position}/{len(OSM_REGIONS)} region {relation}: {len(elements)} objects, {len(seen)} in all", flush=True)
+    if len(seen) < 1000:
+        raise SystemExit(f"only {len(seen)} cameras: Overpass answers are incomplete")
     os.makedirs(ASSETS, exist_ok=True)
     with open(os.path.join(ASSETS, "cameras.tsv"), "w", encoding="utf-8", newline="\n") as f:
         for key, (lat, lon, k, zone, direction, operator) in seen.items():

@@ -78,4 +78,15 @@ class CoordinateParserTest {
         assertNull(CoordinateParser.geohash("paris1")) // "a" and "i" are not geohash letters
         assertNull(CoordinateParser.geohash("u09tv u09tv"))
     }
+
+    @Test
+    fun rejectsTwoLettersOfTheSameAxis() {
+        assertNull(CoordinateParser.parse("48N 2N"))
+        assertNull(CoordinateParser.parse("48E 2E"))
+    }
+
+    @Test
+    fun rejectsFractionalDegreesBeforeMinutes() {
+        assertNull(CoordinateParser.parse("48.5°30' 2°21'"))
+    }
 }

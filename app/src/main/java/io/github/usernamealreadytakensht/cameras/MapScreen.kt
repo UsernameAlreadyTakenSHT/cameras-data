@@ -105,10 +105,13 @@ private const val REFRESH_PAUSE_MS = 800L
 fun MapScreen() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-    val files = remember { DataFiles(context.applicationContext) }
-    val addresses = remember { AddressStore(context.applicationContext, files) }
-    val radarStore = remember { RadarStore(files) }
-    val cameraStore = remember { CameraStore(files) }
+    // One set for the whole process: a new screen (dark mode, language, back then reopen)
+    // finds them as they are, instead of copying or reading the data a second time.
+    val stores = remember { AppStores.get(context) }
+    val files = stores.files
+    val addresses = stores.addresses
+    val radarStore = stores.radars
+    val cameraStore = stores.cameras
     // Once a month, the data that came with the app is renewed if newer files were published.
     LaunchedEffect(Unit) {
         DataUpdater(context.applicationContext, files, radarStore, cameraStore, addresses).runIfDue()
@@ -136,6 +139,15 @@ fun MapScreen() {
     // "My position": each press asks the map to follow the phone's position.
     var centerRequests by remember { mutableIntStateOf(0) }
     var locationAllowed by remember { mutableStateOf(hasLocationPermission(context)) }
+    // Allowed from the system settings meanwhile: the dot shows on return, without a new press.
+    val screenLifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(screenLifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) locationAllowed = hasLocationPermission(context)
+        }
+        screenLifecycle.addObserver(observer)
+        onDispose { screenLifecycle.removeObserver(observer) }
+    }
     // Why the position cannot be shown, explained in a dialog that leads to the right setting.
     var locationIssue by remember { mutableStateOf<LocationIssue?>(null) }
     fun locate() {
@@ -184,8 +196,8 @@ fun MapScreen() {
             onLongPress = { point -> pointAt = point },
             onTouched = { hit ->
                 touched = when (hit) {
-                    is Touched.OfRadar -> shownRadars.getOrNull(hit.index)
-                    is Touched.OfCamera -> shownCameras.getOrNull(hit.index)
+                    is Touched.OfRadar -> hit.radar
+                    is Touched.OfCamera -> hit.camera
                     null -> null
                 }
             },
@@ -618,9 +630,13 @@ private fun BaseMap(
         }
     }
 
-    LaunchedEffect(map, layer, MapFiles.version) {
+    // Only rebuilt when the files of this base map change: a download for the other one leaves it be.
+    val styleText = remember(layer, MapFiles.version) { layer.styleJson(MapFiles.installedFiles(layer)) }
+    LaunchedEffect(map, styleText) {
         style = null
-        map?.setStyle(Style.Builder().fromUri(layer.styleUrl(MapFiles.version))) { style = it }
+        // Handed over as text: without a network, MapLibre fetches no address at all, not even
+        // one the app serves itself, and the map would stay blank.
+        map?.setStyle(Style.Builder().fromJson(styleText)) { style = it }
     }
 
     // A new base map means a new style: the overlays are put back on each of them.
